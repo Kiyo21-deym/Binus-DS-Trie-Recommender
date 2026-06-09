@@ -9,3 +9,4 @@ id,username,password,role,status
 8,seller_fraud,fraud123,SELLER,BANNED
 9,customer_riri,riri123,CUSTOMER,ACTIVE
 10,customer_joko,joko123,CUSTOMER,ACTIVE
+11,kiyo,12345,CUSTOMER,ACTIVE

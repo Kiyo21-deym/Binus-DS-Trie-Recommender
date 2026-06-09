@@ -1,13 +1,13 @@
 id,name,brand,category,price,stock,seller_id,search_count
-1,Asus ROG Zephyrus,Asus,Laptop,25000000,5,2,12
-2,Asus TUF Gaming,Asus,Laptop,14000000,8,2,7
-3,Asus Zenfone 10,Asus,Mobile,12000000,15,2,4
-4,Apple iPhone 15 Pro,Apple,Mobile,21000000,10,3,35
-5,Apple MacBook Air M3,Apple,Laptop,18000000,6,3,22
-6,Apple iPad Air,Apple,Tablet,11000000,12,3,15
-7,Sony WH-1000XM5,Sony,Audio,4500000,20,2,18
-8,Sony WF-1000XM5,Sony,Audio,3200000,25,2,9
-9,Logitech G Pro X,Logitech,Aksesoris,2300000,30,2,14
-10,Keychron K2,Keychron,Aksesoris,1500000,15,2,11
-11,Asus Vivobook,Asus,Laptop,8500000,20,2,3
-12,Apple AirPods Pro,Apple,Audio,3500000,18,3,20
+1,Asus ROG Zephyrus,Asus,Laptop,25000000.00,5,2,16
+2,Asus TUF Gaming,Asus,Laptop,14000000.00,8,2,11
+3,Asus Zenfone 10,Asus,Mobile,12000000.00,15,2,8
+4,Apple iPhone 15 Pro,Apple,Mobile,21000000.00,10,3,35
+5,Apple MacBook Air M3,Apple,Laptop,18000000.00,6,3,22
+6,Apple iPad Air,Apple,Tablet,11000000.00,12,3,15
+7,Sony WH-1000XM5,Sony,Audio,4500000.00,20,2,18
+8,Sony WF-1000XM5,Sony,Audio,3200000.00,25,2,9
+9,Logitech G Pro X,Logitech,Aksesoris,2300000.00,30,2,14
+10,Keychron K2,Keychron,Aksesoris,1500000.00,15,2,11
+11,Asus Vivobook,Asus,Laptop,8500000.00,20,2,7
+12,Apple AirPods Pro,Apple,Audio,3500000.00,18,3,20
