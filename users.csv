@@ -1,0 +1,11 @@
+id,username,password,role,status
+1,admin1,admin123,ADMIN,ACTIVE
+2,seller_asus,asus123,SELLER,ACTIVE
+3,seller_apple,apple123,SELLER,ACTIVE
+4,customer_budi,budi123,CUSTOMER,ACTIVE
+5,customer_siti,siti123,CUSTOMER,ACTIVE
+6,customer_andi,andi123,CUSTOMER,ACTIVE
+7,customer_toxic,toxic123,CUSTOMER,BANNED
+8,seller_fraud,fraud123,SELLER,BANNED
+9,customer_riri,riri123,CUSTOMER,ACTIVE
+10,customer_joko,joko123,CUSTOMER,ACTIVE
