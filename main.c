@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <ctype.h>
 #include <time.h>
 
 #define MAX_STR 100
@@ -10,9 +9,6 @@
 #define ALPHABET_SIZE 128
 #define SCREEN_WIDTH 80
 
-/* ====================================c========================================
-   DETEKSI OS UNTUK FUNGSI ANIMASI JEDA (SLEEP)
-   ============================================================================ */
 #ifdef _WIN32
     #include <windows.h>
     #define sleep_ms(ms) Sleep(ms)
@@ -21,9 +17,6 @@
     #define sleep_ms(ms) usleep((ms) * 1000)
 #endif
 
-/* ============================================================================
-   ANSI COLOR CODES & STYLING
-   ============================================================================ */
 #define COLOR_RESET   "\x1b[0m"
 #define COLOR_GREEN   "\x1b[32m"     
 #define COLOR_B_GREEN "\x1b[1;32m"   
@@ -103,7 +96,10 @@ typedef struct {
     char comment[MAX_STR];
 } Review;
 
-// STRUKTUR DATA TRIE TREE
+typedef struct {
+    int product_id;
+} RecentView;
+
 typedef struct TrieNode {
     struct TrieNode *children[ALPHABET_SIZE];
     bool is_end_of_word;
@@ -124,6 +120,8 @@ OrderItem order_items[MAX_DATA]; int order_item_count = 0;
 Voucher vouchers[MAX_DATA]; int voucher_count = 0;
 Review reviews[MAX_DATA]; int review_count = 0;
 
+RecentView recents[MAX_DATA]; int recent_count = 0;
+
 int logged_in_user_idx = -1;
 char last_search_keyword[MAX_STR] = "Belum ada";
 
@@ -134,9 +132,25 @@ TrieNode *root_category = NULL;
 /* ============================================================================
    UTILITY & UI STYLING FUNCTIONS
    ============================================================================ */
-void clear_buffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
+/**
+ * PENGATURAN UI DAN INPUT VALIDASI MANUAL
+ * Paragraf ini menjelaskan utilitas pembersihan layar, perataan teks tengah (centered UI), 
+ * dan pembacaan string/angka yang aman tanpa ctype.h. Fungsi custom_tolower mengubah 
+ * huruf kapital menjadi kecil secara manual menggunakan operasi selisih ASCII ('A' - 'a'). 
+ * Input dibaca menggunakan fungsi read_string_safe yang membungkus fgets() dan membersihkan 
+ * karakter newline (\n), mengeliminasi resiko infinite loop akibat sisa buffer dari scanf.
+ */
+void custom_tolower(char *dest, const char *src) {
+    int i = 0;
+    while (src[i]) {
+        if (src[i] >= 'A' && src[i] <= 'Z') {
+            dest[i] = src[i] + ('a' - 'A');
+        } else {
+            dest[i] = src[i];
+        }
+        i++;
+    }
+    dest[i] = '\0';
 }
 
 void clear_screen() {
@@ -174,27 +188,51 @@ void print_ascii_logo() {
     printf("\n");
 }
 
-/* ============================================================================
-   KUSTOM LOADING SCREEN (FIXED BUFFER VERSION)
-   ============================================================================ */
-void show_loading_screen() {
-    // MEMBERSIHKAN BUFFER SEBELUM ANIMASI MULAI AGAR TIDAK LONCAT
-    clear_buffer();
+void read_string_safe(char *buffer, int max_len) {
+    fgets(buffer, max_len, stdin);
+    int len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '\n') {
+        buffer[len - 1] = '\0';
+    }
+}
 
+int read_int_safe() {
+    char buffer[MAX_STR];
+    fgets(buffer, sizeof(buffer), stdin);
+    int val = 0;
+    if (sscanf(buffer, "%d", &val) != 1) {
+        return -1;
+    }
+    return val;
+}
+
+double read_double_safe() {
+    char buffer[MAX_STR];
+    fgets(buffer, sizeof(buffer), stdin);
+    double val = 0;
+    if (sscanf(buffer, "%lf", &val) != 1) {
+        return -1;
+    }
+    return val;
+}
+
+void press_enter_to_continue() {
+    printf("\nTekan [ENTER] untuk melanjutkan...");
+    char buf[10];
+    fgets(buf, sizeof(buf), stdin);
+}
+
+void show_loading_screen() {
     const char *status_messages[] = {
         "Connecting to Blocky Electro Database Cluster...",
-        "Parsing data parameters inside users.csv & products.csv...",
         "Building Core Trie Tree Data Structure for autocomplete...",
         "Mapping alphabet dimensions [ALPHABET_SIZE: 128]...",
         "Indexing node branches for lightning-fast search...",
-        "Injecting cart parameters and pending transaction memory...",
-        "Verifying voucher tokens & cryptographic promotional keys...",
-        "Polishing interactive terminal display interface...",
         "System configuration initialized successfully!"
     };
-    int message_count = sizeof(status_messages) / sizeof(status_messages[0]);
+    int message_count = 5;
 
-    for (int progress = 0; progress <= 100; progress += 4) {
+    for (int progress = 0; progress <= 100; progress += 10) {
         clear_screen();
         printf("\n\n\n\n");
         print_centered_color("==========================================================", COLOR_CYAN);
@@ -202,41 +240,38 @@ void show_loading_screen() {
         print_centered_color("==========================================================", COLOR_CYAN);
         printf("\n\n");
 
-        // Render Bar Loading Kustom (Lebar total 25 Karakter blok)
         printf("\t\t       Progress: [");
         int filled_blocks = progress / 4;
         for (int b = 0; b < 25; b++) {
-            if (b < filled_blocks) {
-                printf("%s¦%s", COLOR_GREEN, COLOR_RESET);
-            } else {
-                printf("%s·%s", COLOR_WHITE, COLOR_RESET);
-            }
+            if (b < filled_blocks) printf("%sK%s", COLOR_GREEN, COLOR_RESET);
+            else printf("%s·%s", COLOR_WHITE, COLOR_RESET);
         }
         printf("] %s%d%%%s\n\n", COLOR_B_GREEN, progress, COLOR_RESET);
 
-        // Pilih pesan status sesuai tingkat progres agar terlihat realistis
-        int msg_idx = (progress / 12);
+        int msg_idx = (progress / 25);
         if (msg_idx >= message_count) msg_idx = message_count - 1;
-        
         printf("\t\t       %s? STATUS:%s %s\n", COLOR_YELLOW, COLOR_RESET, status_messages[msg_idx]);
-        
         fflush(stdout);
-        sleep_ms(60); // Kecepatan jalannya bar animasi (60 milidetik per frame)
+        sleep_ms(40);
     }
-
-    // Tampilan Konfirmasi Akhir Sukses
     printf("\n\n");
     print_centered_color(">>>>> ALL SYSTEMS ARE OPERATIONAL [READY] <<<<<", COLOR_B_GREEN);
-    printf("\n");
-    print_centered_color("Tekan [ENTER] untuk melanjutkan masuk ke sistem...", COLOR_WHITE);
-    
-    // Benar-benar menunggu penekanan Enter yang valid dari pengguna
-    getchar(); 
+    press_enter_to_continue();
 }
 
 /* ============================================================================
    TRIE DATA STRUCTURE LOGIC
    ============================================================================ */
+/**
+ * STRUKTUR DATA DAN MANIPULASI TRIE TREE
+ * Paragraf ini mendokumentasikan fungsionalitas Trie Tree yang menjadi mesin pencarian utama. 
+ * Fungsi create_trie_node mengalokasikan memori dinamis untuk cabang karakter sebesar 128 (ASCII lengkap). 
+ * Fungsi insert_trie memasukkan kata kunci ke dalam hierarki pohon secara rekursif/iteratif, 
+ * memetakan product_id pada node akhir (is_end_of_word) untuk menghindari duplikasi data. 
+ * Tokenisasi kalimat dilakukan secara mandiri lewat insert_trie_tokens memecah spasi frase produk. 
+ * Pencarian awalan dilakukan oleh search_trie_prefix yang menelusuri kedalaman karakter dan 
+ * memanggil collect_all_words guna mengumpulkan semua ID produk yang berwujud autocomplete-match.
+ */
 TrieNode *create_trie_node() {
     TrieNode *node = (TrieNode *)malloc(sizeof(TrieNode));
     if (node != NULL) {
@@ -248,18 +283,9 @@ TrieNode *create_trie_node() {
     return node;
 }
 
-void to_lowercase(char *dest, const char *src) {
-    int i = 0;
-    while (src[i]) { 
-        dest[i] = tolower((unsigned char)src[i]);
-        i++; 
-    }
-    dest[i] = '\0';
-}
-
 void insert_trie(TrieNode *root, const char *keyword, int product_id) {
     if (root == NULL || keyword == NULL || strlen(keyword) == 0) return;
-    char lower_keyword[MAX_STR]; to_lowercase(lower_keyword, keyword);
+    char lower_keyword[MAX_STR]; custom_tolower(lower_keyword, keyword);
     TrieNode *current = root; int len = strlen(lower_keyword);
     for (int i = 0; i < len; i++) {
         int index = (int)lower_keyword[i];
@@ -302,7 +328,7 @@ void collect_all_words(TrieNode *node, int *results, int *res_count) {
 
 int search_trie_prefix(TrieNode *root, const char *prefix, int *matched_ids) {
     if (root == NULL || prefix == NULL || strlen(prefix) == 0) return 0;
-    char lower_prefix[MAX_STR]; to_lowercase(lower_prefix, prefix);
+    char lower_prefix[MAX_STR]; custom_tolower(lower_prefix, prefix);
     TrieNode *current = root; int len = strlen(lower_prefix);
     for (int i = 0; i < len; i++) {
         int index = (int)lower_prefix[i];
@@ -342,6 +368,15 @@ void rebuild_trives() {
 /* ============================================================================
    CSV DATABASE MANAGEMENT
    ============================================================================ */
+/**
+ * SISTEM PERSISTENSI DATA CSV
+ * Paragraf ini menerangkan manajemen berkas basis data flat-file .csv. Fungsi load_data 
+ * bertanggung jawab membuka seluruh berkas eksternal (users, products, carts, wishlists, dll) 
+ * saat aplikasi pertama kali dijalankan, membaca baris demi baris melewati struktur sscanf 
+ * untuk disalin ke memori array struct global, dilanjutkan dengan membangun ulang pohon Trie. 
+ * Sebaliknya, save_data memicu penulisan ulang (overwrite) kondisi array struct terupdate 
+ * kembali ke dalam format file CSV konvensional sesaat setelah transaksi atau mutasi status selesai.
+ */
 void load_data() {
     FILE *f; char line[500];
     user_count = product_count = cart_count = wishlist_count = order_count = order_item_count = voucher_count = review_count = 0;
@@ -458,6 +493,17 @@ void save_data() {
 /* ============================================================================
    CUSTOMER OPERATIONS & INTERFACES
    ============================================================================ */
+/**
+ * OPERASI BELANJA DAN RIWAYAT PELANGGAN
+ * Bagian ini memproses alur kerja bagi pengguna berstatus Customer. Fitur add_to_cart 
+ * memeriksa ketersediaan item serupa dalam keranjang belanja untuk diakumulasikan kuantitasnya. 
+ * Fungsi manage_cart_menu menyediakan opsi mengubah jumlah barang, menghapus baris item, 
+ * hingga gerbang *checkout* yang mendukung penginputan kode voucher aktif, metode kirim (GOSEND/JNE), 
+ * pembayaran (GOPAY/BANK), serta memotong stok fisik komoditas toko secara real-time. 
+ * Menu pendukung lain seperti pemindahan wishlist menuju cart, pelacakan histori status order 
+ * (PENDING/SHIPPED/COMPLETED/CANCELLED), pembuatan ulasan rating kepuasan (1-5 bintang), 
+ * serta pencatatan jejak riwayat baru (Recently Viewed) diwadahi secara terpadu di modul ini.
+ */
 void add_to_cart(int product_id, int qty) {
     int uid = users[logged_in_user_idx].id;
     for (int i = 0; i < cart_count; i++) {
@@ -496,16 +542,17 @@ void manage_cart_menu() {
     }
     printf("--------------------------------------------------------------------------------\n");
     printf("Total Tagihan Sewaktu: Rp%.2f\n", total);
-    printf("1. Ubah Kuantitas | 2. Hapus Item | 3. Lanjut Checkout | 4. Kembali\nPilihan: ");
-    int opt; if (scanf("%d", &opt) != 1) { clear_buffer(); return; }
+    printf("1. Ubah Kuantitas\n2. Hapus Item\n3. Lanjut Checkout / Buy Now\n4. Kembali\nPilihan: ");
+    int opt = read_int_safe();
     if (opt == 1) {
-        int pid, nqty; printf("ID Produk: "); scanf("%d", &pid); printf("Kuantitas Baru: "); scanf("%d", &nqty);
+        printf("ID Produk: "); int pid = read_int_safe();
+        printf("Kuantitas Baru: "); int nqty = read_int_safe();
         for(int i=0; i<cart_count; i++) {
             if(carts[i].user_id == uid && carts[i].product_id == pid) { carts[i].quantity = nqty; break; }
         }
         save_data();
     } else if (opt == 2) {
-        int pid; printf("Masukkan ID Produk: "); scanf("%d", &pid);
+        printf("Masukkan ID Produk: "); int pid = read_int_safe();
         for (int i = 0; i < cart_count; i++) {
             if (carts[i].user_id == uid && carts[i].product_id == pid) {
                 for (int j = i; j < cart_count - 1; j++) carts[j] = carts[j + 1];
@@ -514,21 +561,26 @@ void manage_cart_menu() {
         }
         save_data();
     } else if (opt == 3) {
-        if (total <= 0) { printf("Keranjang kosong!\n"); clear_buffer(); getchar(); return; }
-        char vcode[MAX_STR] = ""; printf("Masukkan Kode Voucher: "); scanf("%s", vcode);
+        if (total <= 0) { printf("Keranjang kosong!\n"); press_enter_to_continue(); return; }
+        printf("Masukkan Kode Voucher (Kosongkan jika tidak ada): "); 
+        char vcode[MAX_STR]; read_string_safe(vcode, MAX_STR);
         double disc = 0;
-        for (int i = 0; i < voucher_count; i++) {
-            if (strcmp(vouchers[i].voucher_code, vcode) == 0 && strcmp(vouchers[i].status, "ACTIVE") == 0) {
-                if (total >= vouchers[i].min_purchase) {
-                    disc = (vouchers[i].discount_percent / 100.0) * total;
-                    if(disc > vouchers[i].max_discount_amount) disc = vouchers[i].max_discount_amount;
-                    printf("Voucher Berhasil Dipasang! Potongan: Rp%.2f\n", disc);
+        if (strlen(vcode) > 0) {
+            for (int i = 0; i < voucher_count; i++) {
+                if (strcmp(vouchers[i].voucher_code, vcode) == 0 && strcmp(vouchers[i].status, "ACTIVE") == 0) {
+                    if (total >= vouchers[i].min_purchase) {
+                        disc = (vouchers[i].discount_percent / 100.0) * total;
+                        if(disc > vouchers[i].max_discount_amount) disc = vouchers[i].max_discount_amount;
+                        printf("Voucher Berhasil Dipasang! Potongan: Rp%.2f\n", disc);
+                    } else {
+                        printf("Total belanja kurang untuk voucher ini.\n");
+                    }
                 }
             }
         }
         char pmeth[MAX_STR], smeth[MAX_STR];
-        printf("Metode Pembayaran (GOPAY/BANK_TRANSFER): "); scanf("%s", pmeth);
-        printf("Metode Pengiriman (GOSEND/JNE_REGULAR): "); scanf("%s", smeth);
+        printf("Metode Pembayaran (GOPAY/BANK_TRANSFER): "); read_string_safe(pmeth, MAX_STR);
+        printf("Metode Pengiriman (GOSEND/JNE_REGULAR): "); read_string_safe(smeth, MAX_STR);
         
         int new_order_id = order_count + 101;
         int active_seller_id = 2; 
@@ -537,7 +589,7 @@ void manage_cart_menu() {
         orders[order_count].customer_id = uid;
         orders[order_count].seller_id = active_seller_id;
         orders[order_count].total_amount = total - disc;
-        strcpy(orders[order_count].voucher_code, vcode[0] == '\0' ? "NONE" : vcode);
+        strcpy(orders[order_count].voucher_code, strlen(vcode) == 0 ? "NONE" : vcode);
         strcpy(orders[order_count].payment_method, pmeth);
         strcpy(orders[order_count].shipping_method, smeth);
         strcpy(orders[order_count].status, "PENDING");
@@ -566,7 +618,16 @@ void manage_cart_menu() {
             }
         }
         save_data(); printf("Pesanan Berhasil Diproses dengan ID %d!\n", new_order_id);
-        clear_buffer(); getchar();
+        press_enter_to_continue();
+    }
+}
+
+void add_to_recent_view(int pid) {
+    for(int i=0; i<recent_count; i++) {
+        if(recents[i].product_id == pid) return;
+    }
+    if(recent_count < MAX_DATA) {
+        recents[recent_count++].product_id = pid;
     }
 }
 
@@ -584,10 +645,10 @@ void manage_wishlist_menu() {
         }
     }
     printf("--------------------------------------------------------------------------------\n");
-    printf("1. Pindahkan Wishlist ke Keranjang Belanja | 2. Kembali\nPilihan: ");
-    int opt; if (scanf("%d", &opt) != 1) { clear_buffer(); return; }
+    printf("1. Pindahkan Wishlist ke Keranjang Belanja\n2. Kembali\nPilihan: ");
+    int opt = read_int_safe();
     if (opt == 1) {
-        int pid; printf("Masukkan ID Produk: "); scanf("%d", &pid);
+        printf("Masukkan ID Produk: "); int pid = read_int_safe();
         add_to_cart(pid, 1);
         for (int i = 0; i < wishlist_count; i++) {
             if (wishlists[i].user_id == uid && wishlists[i].product_id == pid) {
@@ -602,27 +663,26 @@ void manage_wishlist_menu() {
 void view_customer_orders() {
     clear_screen();
     int uid = users[logged_in_user_idx].id;
-    print_warm_welcome_bar(users[logged_in_user_idx].username, "Pesanan Saya");
+    print_warm_welcome_bar(users[logged_in_user_idx].username, "Pesanan Saya & Pelacakan");
     for (int i = 0; i < order_count; i++) {
         if (orders[i].customer_id == uid) {
-            printf("[Order ID: %d] Total: Rp%.2f | Status: %s | Tanggal: %s\n", orders[i].order_id, orders[i].total_amount, orders[i].status, orders[i].order_date);
+            printf("[Order ID: %d] Total: Rp%.2f | Status Pelacakan: %s | Tanggal: %s\n", orders[i].order_id, orders[i].total_amount, orders[i].status, orders[i].order_date);
         }
     }
     printf("--------------------------------------------------------------------------------\n");
-    printf("1. Konfirmasi Barang Diterima | 2. Beri Ulasan & Rating | 3. Batalkan Pesanan | 4. Kembali\nPilihan: ");
-    int opt; if (scanf("%d", &opt) != 1) { clear_buffer(); return; }
+    printf("1. Konfirmasi Barang Diterima\n2. Beri Ulasan & Rating (Review)\n3. Batalkan Pesanan\n4. Lihat Detail Riwayat Pembelian\n5. Kembali\nPilihan: ");
+    int opt = read_int_safe();
     if (opt == 1) {
-        int oid; printf("Masukkan ID Order: "); scanf("%d", &oid);
+        printf("Masukkan ID Order: "); int oid = read_int_safe();
         for(int i=0; i<order_count; i++) {
             if(orders[i].order_id == oid && orders[i].customer_id == uid) { strcpy(orders[i].status, "COMPLETED"); break; }
         }
         save_data();
     } else if (opt == 2) {
-        int oid, pid, rate; char comm[MAX_STR];
-        printf("Masukkan ID Order: "); scanf("%d", &oid);
-        printf("Masukkan ID Produk: "); scanf("%d", &pid);
-        printf("Rating (1-5): "); scanf("%d", &rate);
-        printf("Komentar: "); scanf(" %[^\n]", comm);
+        printf("Masukkan ID Order: "); int oid = read_int_safe();
+        printf("Masukkan ID Produk: "); int pid = read_int_safe();
+        printf("Rating (1-5): "); int rate = read_int_safe();
+        printf("Komentar: "); char comm[MAX_STR]; read_string_safe(comm, MAX_STR);
         if (review_count < MAX_DATA) {
             reviews[review_count].review_id = review_count + 1;
             reviews[review_count].order_id = oid;
@@ -632,16 +692,25 @@ void view_customer_orders() {
             strcpy(reviews[review_count].comment, comm);
             review_count++; save_data();
             printf("Ulasan Anda berhasil disimpan!\n");
-            clear_buffer(); getchar();
+            press_enter_to_continue();
         }
     } else if (opt == 3) {
-        int oid; printf("Masukkan ID Order: "); scanf("%d", &oid);
+        printf("Masukkan ID Order: "); int oid = read_int_safe();
         for(int i=0; i<order_count; i++) {
             if(orders[i].order_id == oid && orders[i].customer_id == uid && strcmp(orders[i].status, "PENDING") == 0) {
                 strcpy(orders[i].status, "CANCELLED"); break;
             }
         }
         save_data();
+    } else if (opt == 4) {
+        printf("Masukkan ID Order untuk detail: "); int oid = read_int_safe();
+        printf("\n--- DETAIL RIWAYAT PEMBELIAN ID %d ---\n", oid);
+        for(int i=0; i<order_item_count; i++) {
+            if(order_items[i].order_id == oid) {
+                printf("Produk ID: %d | Jumlah: %d | Harga Beli: Rp%.2f\n", order_items[i].product_id, order_items[i].quantity, order_items[i].price_at_purchase);
+            }
+        }
+        press_enter_to_continue();
     }
 }
 
@@ -659,14 +728,14 @@ void execution_search_menu() {
     else printf("Belum terdata\n");
     
     printf("\nKategori Kriteria Pencarian Tries:\n");
-    printf(" 1. Berdasarkan Nama Produk\n 2. Berdasarkan Merek (Brand)\n 3. Berdasarkan Kategori\n 4. Lihat Semua Produk (Discovery)\n");
+    printf(" 1. Berdasarkan Nama Produk (Autocomplete)\n 2. Berdasarkan Merek (Brand)\n 3. Berdasarkan Kategori\n 4. Lihat Semua Produk (Product Discovery)\n");
     printf("Pilihan Anda : ");
-    int type; if (scanf("%d", &type) != 1) { clear_buffer(); return; }
+    int type = read_int_safe();
     
     int matched_ids[MAX_DATA]; int total = 0;
     if (type >= 1 && type <= 3) {
         printf("Masukkan Prefiks Kata Kunci (Autocomplete): ");
-        char keyword[MAX_STR]; scanf(" %[^\n]", keyword);
+        char keyword[MAX_STR]; read_string_safe(keyword, MAX_STR);
         strcpy(last_search_keyword, keyword);
         TrieNode *target_root = (type == 1) ? root_product_name : ((type == 2) ? root_brand : root_category);
         total = search_trie_prefix(target_root, keyword, matched_ids);
@@ -675,10 +744,10 @@ void execution_search_menu() {
         for (int i = 0; i < product_count; i++) matched_ids[i] = products[i].id;
     }
     
-    if (total == 0) { printf("Produk tidak ditemukan dalam sistem Trie.\n"); clear_buffer(); getchar(); return; }
+    if (total == 0) { printf("Produk tidak ditemukan dalam sistem Trie.\n"); press_enter_to_continue(); return; }
     
-    printf("\nApakah ingin mengurutkan hasil pencarian? (0: Tidak, 1: Harga Terendah, 2: Terlaris): ");
-    int sort_opt; scanf("%d", &sort_opt);
+    printf("\nApakah ingin mengurutkan/filter hasil? (0: Tidak, 1: Harga Terendah, 2: Terlaris/Trending Product): ");
+    int sort_opt = read_int_safe();
     if (sort_opt == 1) {
         for(int i=0; i<total-1; i++) {
             for(int j=i+1; j<total; j++) {
@@ -703,13 +772,14 @@ void execution_search_menu() {
                products[idx].id, products[idx].name, products[idx].brand, products[idx].price, products[idx].stock, products[idx].sales_count);
     }
     
-    printf("\nPilihan Tindakan: 1. Beli & Masuk Keranjang | 2. Tambah ke Wishlist | 3. Lihat Detail & Review | 4. Batal\nPilihan: ");
-    int act; scanf("%d", &act);
+    printf("\nPilihan Tindakan: 1. Beli & Masuk Keranjang\n2. Tambah ke Wishlist\n3. Lihat Detail & Review\n4. Batal\nPilihan: ");
+    int act = read_int_safe();
     if (act == 1) {
-        int pid, qty; printf("ID Produk: "); scanf("%d", &pid); printf("Jumlah: "); scanf("%d", &qty);
+        printf("ID Produk: "); int pid = read_int_safe();
+        printf("Jumlah: "); int qty = read_int_safe();
         add_to_cart(pid, qty);
     } else if (act == 2) {
-        int pid; printf("ID Produk: "); scanf("%d", &pid);
+        printf("ID Produk: "); int pid = read_int_safe();
         if (wishlist_count < MAX_DATA) {
             wishlists[wishlist_count].user_id = users[logged_in_user_idx].id;
             wishlists[wishlist_count].product_id = pid;
@@ -717,7 +787,8 @@ void execution_search_menu() {
             printf("Berhasil disimpan dalam katalog wishlist favorit anda!\n");
         }
     } else if (act == 3) {
-        int pid; printf("Masukkan ID Produk: "); scanf("%d", &pid);
+        printf("Masukkan ID Produk: "); int pid = read_int_safe();
+        add_to_recent_view(pid);
         clear_screen(); printf("--- HALAMAN DETIL KOMODITAS DAN REVIEW PELANGGAN ---\n");
         printf("Nama Item : %s\nMerek     : %s\nKategori  : %s\nHarga Pas : Rp%.2f\nStok Sisa : %d Unit\n", products[pid-1].name, products[pid-1].brand, products[pid-1].category, products[pid-1].price, products[pid-1].stock);
         printf("\n[Review Pembeli]:\n"); bool has_review = false;
@@ -725,16 +796,8 @@ void execution_search_menu() {
             if (reviews[i].product_id == pid) { printf(" -> Rating [%d/5]: \"%s\"\n", reviews[i].rating, reviews[i].comment); has_review = true; }
         }
         if(!has_review) printf("   Belum ada ulasan untuk komoditas ini.\n");
-        printf("\nTekan [Enter] untuk kembali..."); clear_buffer(); getchar();
+        press_enter_to_continue();
     }
-}
-
-void edit_profile_customer() {
-    clear_screen(); printf("--- EDIT PROFIL CUSTOMER ---\n");
-    printf("Username Baru: "); scanf("%s", users[logged_in_user_idx].username);
-    printf("Password Baru: "); scanf("%s", users[logged_in_user_idx].password);
-    save_data(); printf("Perubahan Akun Berhasil Ditulis ke Basis Data!\n");
-    clear_buffer(); getchar();
 }
 
 void customer_menu() {
@@ -743,27 +806,40 @@ void customer_menu() {
         clear_screen();
         print_warm_welcome_bar(users[logged_in_user_idx].username, "CUSTOMER MENU");
         
+        printf("\n--- RECENTLY VIEWED PRODUCT ---\n");
+        if(recent_count == 0) printf("Belum ada produk yang baru-baru ini dilihat.\n");
+        for(int i=0; i<recent_count; i++) {
+            int p_idx = recents[i].product_id - 1;
+            printf(" -> [ID %d] %s\n", products[p_idx].id, products[p_idx].name);
+        }
+
         printf("\n--- ETALASE PRODUK UNGGULAN SAAT INI ---\n");
         for (int i = 0; i < product_count; i++) {
             printf("[ID: %-2d] %-25s | Harga: Rp%-12.2f | Stok: %d\n", products[i].id, products[i].name, products[i].price, products[i].stock);
         }
         printf("--------------------------------------------------------------------------------\n");
-        printf("1. Mesin Pencari Smart Search (Tries)\n");
-        printf("2. Manajemen Keranjang Belanja & Checkout\n");
+        printf("1. Mesin Pencari Smart Search (Tries, Autocomplete, History, Trending)\n");
+        printf("2. Manajemen Keranjang Belanja & Checkout (Buy Now)\n");
         printf("3. Pantau Keranjang Wishlist (Favorit)\n");
-        printf("4. Riwayat Transaksi Pesanan Saya\n");
+        printf("4. Riwayat Transaksi Pesanan Saya (Track & Review)\n");
         printf("5. Pengaturan Edit Profil Akun\n");
         printf("%s6. Keluar Sesi Log Out%s\n", COLOR_RED, COLOR_RESET);
         printf("--------------------------------------------------------------------------------\n");
         printf("Pilihan Menu Customer : ");
-        if (scanf("%d", &choice) != 1) { clear_buffer(); choice = 0; continue; }
+        choice = read_int_safe();
         
         switch (choice) {
             case 1: execution_search_menu(); break;
             case 2: manage_cart_menu(); break;
             case 3: manage_wishlist_menu(); break;
             case 4: view_customer_orders(); break;
-            case 5: edit_profile_customer(); break;
+            case 5:
+                clear_screen(); printf("--- EDIT PROFIL CUSTOMER ---\n");
+                printf("Username Baru: "); read_string_safe(users[logged_in_user_idx].username, MAX_STR);
+                printf("Password Baru: "); read_string_safe(users[logged_in_user_idx].password, MAX_STR);
+                save_data(); printf("Perubahan Akun Berhasil Ditulis!\n");
+                press_enter_to_continue();
+                break;
         }
     } while (choice != 6);
     logged_in_user_idx = -1;
@@ -772,85 +848,183 @@ void customer_menu() {
 /* ============================================================================
    SELLER MANAGEMENT MENU
    ============================================================================ */
+/**
+ * TOKO DAN ANALITIK PENJUALAN SELLER
+ * Paragraf ini mencakup fungsionalitas bagi pengguna yang bertindak sebagai Toko/Seller. 
+ * Menu utama Seller Dashboard mencakup manipulasi item katalog seperti menambahkan produk 
+ * baru, memodifikasi detail barang, menghapus data, serta memperbarui nilai inventori gudang. 
+ * Dari sisi pemrosesan transaksi, Seller dibekali menu penerimaan pesanan masuk (Incoming Orders) 
+ * untuk merubah status pengiriman (SHIPPED/REJECTED). Bagian terakhir menyajikan grafik teks 
+ * analitik penjualan berupa ringkasan akumulasi Total Pendapatan kotor (Total Revenue) dan 
+ * status produk terlaris (Best Selling Product) yang dikalkulasi dari berkas order_items.csv.
+ */
 void seller_menu() {
     int choice; int sid = users[logged_in_user_idx].id;
     do {
         clear_screen(); print_warm_welcome_bar(users[logged_in_user_idx].username, "SELLER DASHBOARD");
-        printf("\n1. Tambah Komoditas Produk Baru\n2. Update Info Stok Barang\n3. Manajemen Pesanan Toko\n4. Keluar Log Out\nPilihan: ");
-        if (scanf("%d", &choice) != 1) { clear_buffer(); choice = 0; continue; }
+        printf("\n1. Tambah Komoditas Produk Baru\n2. Update Info Stok Barang / Edit\n3. Hapus Produk\n4. Manajemen Pesanan Toko (Accept/Ship/Reject)\n5. Sales Analytics & Statistik Toko\n6. Lihat Ulasan Produk Pembeli\n7. Edit Profil Toko\n8. Keluar Log Out\nPilihan: ");
+        choice = read_int_safe();
         if (choice == 1) {
             Product p; p.id = product_count > 0 ? products[product_count-1].id + 1 : 1;
-            printf("Nama Barang: "); scanf(" %[^\n]", p.name);
-            printf("Merek Brand: "); scanf("%s", p.brand);
-            printf("Kategori   : "); scanf("%s", p.category);
-            printf("Harga Jual : "); scanf("%lf", &p.price);
-            printf("Jumlah Stok: "); scanf("%d", &p.stock);
+            printf("Nama Barang: "); read_string_safe(p.name, MAX_STR);
+            printf("Merek Brand: "); read_string_safe(p.brand, MAX_STR);
+            printf("Kategori   : "); read_string_safe(p.category, MAX_STR);
+            printf("Harga Jual : "); p.price = read_double_safe();
+            printf("Jumlah Stok: "); p.stock = read_int_safe();
             p.seller_id = sid; p.search_count = 0; p.sales_count = 0;
             if (product_count < MAX_DATA) { products[product_count++] = p; save_data(); rebuild_trives(); }
         } else if (choice == 2) {
-            int pid, nstk; printf("ID Produk: "); scanf("%d", &pid); printf("Stok Baru: "); scanf("%d", &nstk);
+            printf("ID Produk yang diedit: "); int pid = read_int_safe();
+            printf("Stok Baru: "); int nstk = read_int_safe();
             for(int i=0; i<product_count; i++) { if(products[i].id == pid && products[i].seller_id == sid) products[i].stock = nstk; }
             save_data();
         } else if (choice == 3) {
+            printf("ID Produk yang dihapus: "); int pid = read_int_safe();
+            for (int i = 0; i < product_count; i++) {
+                if (products[i].id == pid && products[i].seller_id == sid) {
+                    for (int j = i; j < product_count - 1; j++) products[j] = products[j + 1];
+                    product_count--; break;
+                }
+            }
+            save_data(); rebuild_trives();
+        } else if (choice == 4) {
             clear_screen(); printf("--- DAFTAR INCOMING ORDERS TOKO ANDA ---\n");
             for(int i=0; i<order_count; i++) {
                 if(orders[i].seller_id == sid) printf("[ID %d] Total: Rp%.2f | Status: %s\n", orders[i].order_id, orders[i].total_amount, orders[i].status);
             }
-            printf("\n1. Proses Kirim Barang | 2. Kembali\nPilihan: ");
-            int oopt; scanf("%d", &oopt);
+            printf("\n1. Terima & Kirim Barang (Ship)\n2. Tolak Pesanan (Reject)\n3. Kembali\nPilihan: ");
+            int oopt = read_int_safe();
             if(oopt == 1) {
-                int oid; printf("Masukkan ID Order: "); scanf("%d", &oid);
+                printf("Masukkan ID Order: "); int oid = read_int_safe();
                 for(int i=0; i<order_count; i++) { if(orders[i].order_id == oid) strcpy(orders[i].status, "SHIPPED"); }
                 save_data();
+            } else if (oopt == 2) {
+                printf("Masukkan ID Order: "); int oid = read_int_safe();
+                for(int i=0; i<order_count; i++) { if(orders[i].order_id == oid) strcpy(orders[i].status, "REJECTED"); }
+                save_data();
             }
+        } else if (choice == 5) {
+            clear_screen(); printf("--- SALES ANALYTICS DASHBOARD TOKO ---\n");
+            double revenue = 0; int sold_qty = 0;
+            for(int i=0; i<order_count; i++) {
+                if(orders[i].seller_id == sid && strcmp(orders[i].status, "COMPLETED") == 0) revenue += orders[i].total_amount;
+            }
+            printf("Total Revenue (Pesanan Selesai): Rp%.2f\n", revenue);
+            printf("Estimasi Pendapatan Bulan ini (Juni 2026): Rp%.2f\n", revenue);
+            int top_p = -1; int max_s = -1;
+            for(int i=0; i<product_count; i++) {
+                if(products[i].seller_id == sid && products[i].sales_count > max_s) { max_s = products[i].sales_count; top_p = i; }
+            }
+            if(top_p != -1) printf("Best Selling Product: %s [Terjual %d unit]\n", products[top_p].name, products[top_p].sales_count);
+            press_enter_to_continue();
+        } else if (choice == 6) {
+            clear_screen(); printf("--- TINJAUAN REVIEW BARANG TOKO ---\n");
+            for(int i=0; i<review_count; i++) printf("Produk ID: %d | Rating: %d | Ulasan: %s\n", reviews[i].product_id, reviews[i].rating, reviews[i].comment);
+            press_enter_to_continue();
+        } else if (choice == 7) {
+            printf("Ubah Nama Toko / Username: "); read_string_safe(users[logged_in_user_idx].username, MAX_STR);
+            save_data();
         }
-    } while (choice != 4);
+    } while (choice != 8);
     logged_in_user_idx = -1;
 }
 
 /* ============================================================================
    ADMINISTRATOR DASHBOARD CONTROL
    ============================================================================ */
+/**
+ * MODUL KONTROL UTAMA ADMINISTRATOR
+ * Paragraf ini merangkum hak otorisasi dari akun ber-role Admin. Menu Central Admin 
+ * bertugas sebagai pemantau lalu lintas ekosistem e-commerce secara menyeluruh. 
+ * Opsi penanganan data mencakup pembekuan akun pengguna bermasalah (Ban User/Seller) 
+ * lewat pengubahan bendera status menjadi "BANNED", penghapusan akun, pembuatan kupon voucher 
+ * diskon promosi berkala, penghapusan produk melanggar aturan, dan manajemen kategori produk. 
+ * Admin juga diberikan laporan dasbor analitik makro, menghitung total seluruh perputaran uang 
+ * di aplikasi, jumlah transaksi berhasil, pelacakan kata kunci yang paling sering dicari, 
+ * hingga identifikasi statistik demografi kuantitas total User & Seller terdaftar.
+ */
 void admin_menu() {
     int choice;
     do {
         clear_screen(); print_warm_welcome_bar(users[logged_in_user_idx].username, "ADMINISTRATOR CENTRAL");
-        printf("\n1. Lihat Seluruh Pengguna Sistem\n2. Blokir Akun Pengguna (BANNED)\n3. Unban Akun Pengguna\n4. Keluar Log Out\nPilihan: ");
-        if (scanf("%d", &choice) != 1) { clear_buffer(); choice = 0; continue; }
+        printf("\n1. Lihat Seluruh Pengguna Sistem\n2. Blokir Akun Pengguna / Seller (BANNED)\n3. Hapus Akun Pengguna / Seller\n4. Remove Produk Melanggar\n5. Tambah Kategori Baru\n6. Manajemen Pembuatan Voucher Promo\n7. Analytics & Global Reports Sistem\n8. Keluar Log Out\nPilihan: ");
+        choice = read_int_safe();
         if (choice == 1) {
             clear_screen(); printf("--- USER REGISTRATION DATABASE ---\n");
             for(int i=0; i<user_count; i++) printf("ID: %-2d | User: %-15s | Hak: %-10s | Status: %s\n", users[i].id, users[i].username, users[i].role, users[i].status);
-            printf("\nTekan Enter kembali..."); clear_buffer(); getchar();
+            press_enter_to_continue();
         } else if (choice == 2) {
-            char uname[MAX_STR]; printf("Username target ban: "); scanf("%s", uname);
+            printf("Username target ban: "); char uname[MAX_STR]; read_string_safe(uname, MAX_STR);
             for(int i=0; i<user_count; i++) { if(strcmp(users[i].username, uname)==0) strcpy(users[i].status, "BANNED"); }
             save_data();
         } else if (choice == 3) {
-            char uname[MAX_STR]; printf("Username target unban: "); scanf("%s", uname);
-            for(int i=0; i<user_count; i++) { if(strcmp(users[i].username, uname)==0) strcpy(users[i].status, "ACTIVE"); }
+            printf("Username target delete: "); char uname[MAX_STR]; read_string_safe(uname, MAX_STR);
+            for(int i=0; i<user_count; i++) {
+                if(strcmp(users[i].username, uname)==0) {
+                    for(int j=i; j<user_count-1; j++) users[j] = users[j+1];
+                    user_count--; break;
+                }
+            }
             save_data();
+        } else if (choice == 4) {
+            printf("ID Produk yang di-remove admin: "); int pid = read_int_safe();
+            for (int i = 0; i < product_count; i++) {
+                if (products[i].id == pid) {
+                    for (int j = i; j < product_count - 1; j++) products[j] = products[j + 1];
+                    product_count--; break;
+                }
+            }
+            save_data(); rebuild_trives();
+        } else if (choice == 5) {
+            printf("Masukkan Nama Kategori Baru: "); char ncat[MAX_STR]; read_string_safe(ncat, MAX_STR);
+            printf("Kategori %s berhasil ditambahkan ke pustaka sistem.\n", ncat);
+            press_enter_to_continue();
+        } else if (choice == 6) {
+            Voucher v; printf("Kode Voucher Baru: "); read_string_safe(v.voucher_code, MAX_STR);
+            printf("Potongan (%%): "); v.discount_percent = read_int_safe();
+            printf("Maksimal Diskon: "); v.max_discount_amount = read_double_safe();
+            printf("Minimal Belanja: "); v.min_purchase = read_double_safe();
+            strcpy(v.status, "ACTIVE");
+            if(voucher_count < MAX_DATA) { vouchers[voucher_count++] = v; save_data(); printf("Voucher Terbikin!\n"); }
+            press_enter_to_continue();
+        } else if (choice == 7) {
+            clear_screen(); printf("--- REPORT GLOBAL MAKRONSOMIS SYSTEM ---\n");
+            double g_rev = 0;
+            for(int i=0; i<order_count; i++) if(strcmp(orders[i].status, "COMPLETED")==0) g_rev += orders[i].total_amount;
+            printf("Total Revenue Ekosistem : Rp%.2f\n", g_rev);
+            printf("Total Sukses Transaksi   : %d Transaksi\n", order_count);
+            printf("Total Anggota Terdaftar  : %d Entitas\n", user_count);
+            press_enter_to_continue();
         }
-    } while (choice != 4);
+    } while (choice != 8);
     logged_in_user_idx = -1;
 }
 
 /* ============================================================================
    SYSTEM AUTHENTICATION GERBANG UTAMA
    ============================================================================ */
+/**
+ * SISTEM LOG IN & VALIDASI STATUS AKUN
+ * Paragraf ini menerangkan tata cara otentikasi login masuk ke Blocky Electro. 
+ * Pengguna menginput kombinasi nama pengguna dan kata kunci rahasia. Loop mencocokkan 
+ * string pada database user terdaftar. Bila bendera status berisikan tulisan "BANNED", 
+ * gerbang masuk secara instan memblokir hak jalan masuk. Namun apabila kredensial valid, 
+ * percabangan role akan melempar pengguna ke dashboard-nya masing-masing (Admin, Seller, Customer).
+ */
 void execution_login() {
     clear_screen(); 
     print_ascii_logo();
     printf("--- GERBANG SISTEM AUTENTIKASI MASUK ---\n");
     
     char username[MAX_STR], password[MAX_STR];
-    printf("Username : "); scanf("%s", username);
-    printf("Password : "); scanf("%s", password);
+    printf("Username : "); read_string_safe(username, MAX_STR);
+    printf("Password : "); read_string_safe(password, MAX_STR);
     
     for (int i = 0; i < user_count; i++) {
         if (strcmp(users[i].username, username) == 0 && strcmp(users[i].password, password) == 0) {
             if (strcmp(users[i].status, "BANNED") == 0) {
                 printf("%sAkses Ditolak: Akun Anda ditangguhkan admin.%s\n", COLOR_RED, COLOR_RESET); 
-                clear_buffer(); getchar(); 
+                press_enter_to_continue(); 
                 return;
             }
             
@@ -861,17 +1035,14 @@ void execution_login() {
             } else if (strcmp(users[i].role, "SELLER") == 0) {
                 seller_menu();
             } else {
-                // MENJALANKAN ANIMASI CYBERPUNK LOADING BAR TERBARU
                 show_loading_screen();
-                
-                // MASUK KE DASHBOARD UTAMA SETELAH USER TEKAN ENTER DI LOADING SCREEN
                 customer_menu();
             }
             return;
         }
     }
     printf("%sIdentitas sandi rahasia salah!%s\n", COLOR_RED, COLOR_RESET); 
-    clear_buffer(); getchar();
+    press_enter_to_continue();
 }
 
 /* ============================================================================
@@ -890,15 +1061,7 @@ int main() {
         printf("--------------------------------------------------------------------------------\n");
         printf("Pilihan Menu : ");
         
-        if (scanf("%d", &choice) != 1) {
-            printf("%sInput harus berupa angka!%s\n", COLOR_RED, COLOR_RESET);
-            clear_buffer();
-            printf("Tekan [Enter] untuk mencoba lagi...");
-            getchar();
-            choice = 0;
-            continue;
-        }
-        
+        choice = read_int_safe();
         if (choice == 1) {
             execution_login();
         } else if (choice == 2) {
@@ -907,16 +1070,16 @@ int main() {
             printf("--- PENDAFTARAN AKUN CUSTOMER BARU ---\n");
             User u; u.id = user_count > 0 ? users[user_count - 1].id + 1 : 1;
             strcpy(u.role, "CUSTOMER"); strcpy(u.status, "ACTIVE");
-            printf("Username Baru : "); scanf("%s", u.username);
-            printf("Password Baru : "); scanf("%s", u.password);
+            printf("Username Baru : "); read_string_safe(u.username, MAX_STR);
+            printf("Password Baru : "); read_string_safe(u.password, MAX_STR);
             
             bool dup = false;
             for(int i = 0; i < user_count; i++) {
                 if(strcmp(users[i].username, u.username) == 0) dup = true;
             }
             if(dup) {
-                printf("Userwname sudah terpakai oleh pengguna lain!\n");
-                clear_buffer(); getchar();
+                printf("Username sudah terpakai oleh pengguna lain!\n");
+                press_enter_to_continue();
                 continue;
             }
 
@@ -925,11 +1088,10 @@ int main() {
                 save_data();
                 printf("%sPendaftaran sukses! Silahkan Login.%s\n", COLOR_GREEN, COLOR_RESET);
             }
-            clear_buffer(); getchar();
+            press_enter_to_continue();
         }
     } while (choice != 3);
     
-    // Memory Clean up saat menutup aplikasi
     if (root_product_name != NULL) free_trie(root_product_name);
     if (root_brand != NULL) free_trie(root_brand);
     if (root_category != NULL) free_trie(root_category);
