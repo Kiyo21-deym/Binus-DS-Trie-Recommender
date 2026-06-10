@@ -10,3 +10,4 @@ id,username,password,role,status
 9,customer_riri,riri123,CUSTOMER,ACTIVE
 10,customer_joko,joko123,CUSTOMER,ACTIVE
 11,kiyo,12345,CUSTOMER,ACTIVE
+12,axell,axell,CUSTOMER,ACTIVE
