@@ -1,7 +1,11 @@
 review_id,order_id,product_id,customer_id,rating,comment
 1,101,1,4,5,Laptop ROG kencang parah tidak ada saingan!
-2,101,7,4,4,Suara headphone Sony mantap bass empuk.
-3,102,4,4,5,iPhone 15 Pro titanium terasa ringan sekali.
-4,103,7,5,3,Pengiriman agak lama tapi produk Sony original.
-5,108,1,4,5,Beli laptop kedua di toko ini selalu memuaskan.
-6,109,9,6,4,Mouse logitech sangan responsif untuk game FPS.
+2,102,1,5,5,Beli laptop kedua di toko ini selalu memuaskan.
+3,103,4,6,5,iPhone 15 Pro luar biasa, kamera sangat tajam.
+4,104,7,4,4,Noise cancelling sangat efektif, tapi harga agak mahal.
+5,105,9,7,5,Keyboard enak banget buat ngetik seharian.
+6,106,1,8,4,Performa bagus tapi baterai cepat habis.
+7,107,1,9,5,Desain sangat premium dan tipis.
+8,108,1,10,5,ROG memang rajanya laptop gaming.
+9,109,1,11,5,Sangat puas dengan pengiriman dan packaging aman.
+10,110,1,12,3,Barang oke tapi pengiriman sedikit terlambat.
