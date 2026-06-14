@@ -1,11 +1,11 @@
 id,name,brand,category,price,stock,seller_id,search_count,description
-1,Asus ROG Zephyrus,Asus,Laptop,25000000.00,5,2,20,Laptop gaming tipis dengan performa monster dan layar 240Hz.
-2,Asus TUF Gaming,Asus,Laptop,14000000.00,8,2,14,Laptop tangguh untuk gaming berat dengan sistem pendingin efisien.
-3,Asus Zenfone 10,Asus,Mobile,12000000.00,15,2,11,Smartphone compact dengan performa flagship dan kamera stabil.
-4,Apple iPhone 15 Pro,Apple,Mobile,21000000.00,10,3,35,Smartphone tercanggih dengan chip A17 Pro yang sangat cepat.
-5,Apple MacBook Air M3,Apple,Laptop,18000000.00,6,3,22,Laptop ringan dan powerful untuk produktivitas sehari-hari.
-6,Apple iPad Air,Apple,Tablet,11000000.00,12,3,15,Tablet serbaguna dengan chip M2 untuk bekerja dan berkarya.
-7,Sony WH-1000XM5,Sony,Audio,4500000.00,20,2,18,Headphone noise cancelling terbaik dengan kualitas suara jernih.
-8,Sony WF-1000XM5,Sony,Audio,3200000.00,25,2,9,Earbud nirkabel dengan kenyamanan maksimal dan suara premium.
-9,Logitech G Pro X,Logitech,Aksesoris,2300000.00,30,2,14,Keyboard mekanik profesional pilihan para atlet e-sport.
-10,Keychron K2,Keychron,Aksesoris,1500000.00,15,2,11,Keyboard wireless mekanik dengan desain retro yang estetik.
+1,Asus ROG Zephyrus,Asus,Laptop,25000000.00,1,2,32,15,Laptop gaming tipis dengan performa monster dan layar 240Hz.
+2,Asus TUF Gaming,Asus,Laptop,14000000.00,8,2,26,42,Laptop tangguh untuk gaming berat dengan sistem pendingin efisien.
+3,Asus Zenfone 10,Asus,Mobile,12000000.00,15,2,22,8,Smartphone compact dengan performa flagship dan kamera stabil.
+4,Apple iPhone 15 Pro,Apple,Mobile,21000000.00,9,3,39,120,Smartphone tercanggih dengan chip A17 Pro yang sangat cepat.
+5,Apple MacBook Air M3,Apple,Laptop,18000000.00,6,3,26,65,Laptop ringan dan powerful untuk produktivitas sehari-hari.
+6,Apple iPad Air,Apple,Tablet,11000000.00,12,3,18,33,Tablet serbaguna dengan chip M2 untuk bekerja dan berkarya.
+7,Sony WH-1000XM5,Sony,Audio,4500000.00,20,2,19,85,Headphone noise cancelling terbaik dengan kualitas suara jernih.
+8,Sony WF-1000XM5,Sony,Audio,3200000.00,25,2,10,40,Earbud nirkabel dengan kenyamanan maksimal dan suara premium.
+9,Logitech G Pro X,Logitech,Aksesoris,2300000.00,30,2,15,210,Keyboard mekanik profesional pilihan para atlet e-sport.
+10,Keychron K2,Keychron,Aksesoris,1500000.00,15,2,12,95,Keyboard wireless mekanik dengan desain retro yang estetik.
