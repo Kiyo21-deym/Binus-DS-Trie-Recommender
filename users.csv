@@ -1,13 +1,14 @@
-id,username,password,role,status
-1,admin1,admin123,ADMIN,ACTIVE
-2,asus,asus123,SELLER,ACTIVE
-3,apple,apple123,SELLER,ACTIVE
-4,budi,budi123,CUSTOMER,ACTIVE
-5,siti,siti123,CUSTOMER,ACTIVE
-6,andi,andi123,CUSTOMER,ACTIVE
-7,toxical,toxic123,CUSTOMER,BANNED
-8,fraudy,fraud123,SELLER,BANNED
-9,riri,riri123,CUSTOMER,ACTIVE
-10,joko,joko123,CUSTOMER,ACTIVE
-11,kiyo,12345,CUSTOMER,ACTIVE
-12,axell,axell,CUSTOMER,ACTIVE
+id,username,password,role,status,full_name,birth_info,address,email,phone
+1,admin1,admin123,ADMIN,ACTIVE,Admin Utama,Jakarta 01-01-1990,Jl. Pusat,admin@system.com,081200000000
+2,asus,asus123,SELLER,ACTIVE,Asus Official,Taiwan 1989,Jl. Tech,asus@mail.com,081211111111
+3,apple,apple123,SELLER,ACTIVE,Apple Official,USA 1976,Jl. Silicon,apple@mail.com,081222222222
+4,budi,budi123,CUSTOMER,ACTIVE,Budi Santoso,Bandung 12-05-1995,Jl. Merdeka 1,budi@mail.com,081233333333
+5,siti,siti123,CUSTOMER,ACTIVE,Siti Aminah,Surabaya 20-08-1998,Jl. Melati 2,siti@mail.com,081244444444
+6,andi,andi123,CUSTOMER,ACTIVE,Andi Wijaya,Medan 10-02-1992,Jl. Mawar 3,andi@mail.com,081255555555
+7,toxical,toxic123,CUSTOMER,BANNED,Toxical User,Jakarta 01-01-2000,Jl. Hitam,toxic@mail.com,081266666666
+8,fraudy,fraud123,SELLER,BANNED,Fraudy Seller,Jakarta 01-01-1995,Jl. Gelap,fraud@mail.com,081277777777
+9,riri,riri123,CUSTOMER,ACTIVE,Riri Ananda,Bali 05-07-2001,Jl. Pantai,riri@mail.com,081288888888
+10,joko,joko123,CUSTOMER,ACTIVE,Joko Susilo,Jogja 15-09-1993,Jl. Budaya,joko@mail.com,081299999999
+11,kiyo,12345,CUSTOMER,ACTIVE,Kiyo Vincent,Jepang 10-10-1999,PBI K7 No. 38,kiyo@mail.com,081300000000
+12,axell,axell,CUSTOMER,ACTIVE,Axell Pratama,Jakarta 01-01-1997,Jl. Damai,axell@mail.com,081311111111
+13,Vincent,vin123,CUSTOMER,ACTIVE,Vincent Van Guguk,Malang, 21-07-2007,-,kiyovincent@gmail.com,08123456789
