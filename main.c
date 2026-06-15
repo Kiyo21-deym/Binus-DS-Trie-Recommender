@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
+#include <ctype.h>
 
 #define MAX_STR 200
 #define MAX_DATA 200
@@ -514,7 +515,7 @@ void save_data() {
     }
     if ((f = fopen("vouchers.csv", "w"))) {
         fprintf(f, "voucher_code,discount_percent,max_discount_amount,min_purchase,status\n");
-        for (int i = 0; i < voucher_count; i++) fprintf(f, "%s,%d,%.2f,%.2f,%s\n", vouchers[voucher_count].voucher_code, vouchers[voucher_count].discount_percent, vouchers[voucher_count].max_discount_amount, vouchers[voucher_count].min_purchase, vouchers[voucher_count].status);
+        for (int i = 0; i < voucher_count; i++) fprintf(f, "%s,%d,%.2f,%.2f,%s\n", vouchers[i].voucher_code, vouchers[i].discount_percent, vouchers[i].max_discount_amount, vouchers[i].min_purchase, vouchers[i].status);
         fclose(f);
     }
     if ((f = fopen("reviews.csv", "w"))) {
@@ -664,19 +665,59 @@ void manage_cart_menu() {
             return;
         }
         printf("Masukkan Kuantitas Baru: ");
-        int nqty = read_int_safe();
-        if (nqty <= 0) {
-            printf("%s[!] Kuantitas harus lebih dari 0. Gunakan menu Hapus jika ingin menghapus.\n%s", COLOR_RED, COLOR_RESET);
-        } else {
-            for (int i = 0; i < cart_count; i++) {
-                if (carts[i].user_id == uid && carts[i].product_id == pid) {
-                    carts[i].quantity = nqty;
-                    break;
-                }
-            }
-            save_data();
-            printf("%s[OK] Kuantitas berhasil diperbarui!\n%s", COLOR_PINE_GREEN, COLOR_RESET);
-        }
+		int nqty = read_int_safe();
+		
+		if (nqty <= 0)
+		{
+		    printf("%s[!] Kuantitas harus lebih dari 0. Gunakan menu Hapus jika ingin menghapus.\n%s",
+		           COLOR_RED,
+		           COLOR_RESET);
+		}
+		else
+		{
+		    bool stock_ok = false;
+		
+		    for(int i=0; i<product_count; i++)
+		    {
+		        if(products[i].id == pid)
+		        {
+		            if(nqty > products[i].stock)
+		            {
+		                printf("%s[!] Stok hanya tersedia %d unit!\n%s",
+		                       COLOR_RED,
+		                       products[i].stock,
+		                       COLOR_RESET);
+		            }
+		            else
+		            {
+		                stock_ok = true;
+		            }
+		
+		            break;
+		        }
+		    }
+		
+		    if(stock_ok)
+		    {
+		        for (int i = 0; i < cart_count; i++)
+		        {
+		            if (
+		                carts[i].user_id == uid &&
+		                carts[i].product_id == pid
+		            )
+		            {
+		                carts[i].quantity = nqty;
+		                break;
+		            }
+		        }
+		
+		        save_data();
+		
+		        printf("%s[OK] Kuantitas berhasil diperbarui!\n%s",
+		               COLOR_PINE_GREEN,
+		               COLOR_RESET);
+		    }
+		}
         press_enter_to_continue();
     } 
     else if (opt == 2) {
@@ -738,12 +779,44 @@ void manage_cart_menu() {
         double final_total = total - disc;
         if (final_total < 0) final_total = 0;
         printf("Total Pembayaran: Rp%.2f\n", final_total);
-        printf("Pilih Metode Pembayaran (COD/TRANSFER/EWALLET): ");
+        
         char pay_method[MAX_STR];
-        read_string_safe(pay_method, MAX_STR);
-        printf("Pilih Metode Pengiriman (REGULER/EKSPRES): ");
-        char ship_method[MAX_STR];
-        read_string_safe(ship_method, MAX_STR);
+		char ship_method[MAX_STR];
+        do
+		{
+		    printf("Pilih Metode Pembayaran (COD/TRANSFER/EWALLET): ");
+		    read_string_safe(pay_method, MAX_STR);
+		
+		    for(int i=0; pay_method[i]; i++)
+		        pay_method[i] = toupper(pay_method[i]);
+		
+		    if(
+		        strcmp(pay_method,"COD")==0 ||
+		        strcmp(pay_method,"TRANSFER")==0 ||
+		        strcmp(pay_method,"EWALLET")==0
+		    )
+		        break;
+		
+		    printf("[!] Metode pembayaran tidak valid!\n");
+		
+		} while(1);
+        do
+		{
+		    printf("Pilih Metode Pengiriman (REGULER/EKSPRES): ");
+		    read_string_safe(ship_method, MAX_STR);
+		
+		    for(int i=0; ship_method[i]; i++)
+		        ship_method[i] = toupper(ship_method[i]);
+		
+		    if(
+		        strcmp(ship_method,"REGULER")==0 ||
+		        strcmp(ship_method,"EKSPRES")==0
+		    )
+		        break;
+		
+		    printf("[!] Metode pengiriman tidak valid!\n");
+		
+		} while(1);
 
         int new_order_id = (order_count > 0) ? orders[order_count - 1].order_id + 1 : 1;
         time_t t = time(NULL);
@@ -751,11 +824,30 @@ void manage_cart_menu() {
         char date_str[MAX_STR];
         sprintf(date_str, "%02d-%02d-%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 
-        int seller_id = 1; 
-        Order o;
-        o.order_id = new_order_id;
-        o.customer_id = uid;
-        o.seller_id = seller_id;
+        int seller_id = -1;
+
+		for(int i=0; i<cart_count; i++)
+		{
+		    if(carts[i].user_id == uid)
+		    {
+		        for(int j=0; j<product_count; j++)
+		        {
+		            if(products[j].id == carts[i].product_id)
+		            {
+		                seller_id = products[j].seller_id;
+		                break;
+		            }
+		        }
+		
+		        if(seller_id != -1)
+		            break;
+		    }
+		}
+		
+		Order o;
+		o.order_id = new_order_id;
+		o.customer_id = uid;
+		o.seller_id = seller_id;
         o.total_amount = final_total;
         strcpy(o.voucher_code, strlen(vcode) > 0 ? vcode : "NONE");
         strcpy(o.payment_method, pay_method);
@@ -779,7 +871,16 @@ void manage_cart_menu() {
                         if (order_item_count < MAX_DATA) {
                             order_items[order_item_count++] = oi;
                         }
-                        products[j].stock -= carts[i].quantity;
+                        if(carts[i].quantity > products[j].stock)
+						{
+						    printf("[!] Stok %s tidak mencukupi!\n",
+						           products[j].name);
+						
+						    press_enter_to_continue();
+						    return;
+						}
+						
+						products[j].stock -= carts[i].quantity;
                     }
                 }
             }
@@ -903,12 +1004,28 @@ void view_customer_orders() {
         int oid = read_int_safe();
         bool found = false;
         for (int i = 0; i < order_count; i++) {
-            if (orders[i].order_id == oid && orders[i].customer_id == uid) {
-                strcpy(orders[i].status, "COMPLETED");
-                found = true;
-                printf("%s[OK] Pesanan #%d telah diselesaikan. Terima kasih!\n%s", COLOR_PINE_GREEN, oid, COLOR_RESET);
-                break;
-            }
+            if (orders[i].order_id == oid && orders[i].customer_id == uid)
+			{
+			    found = true;
+			
+			    if(strcmp(orders[i].status, "SHIPPED") != 0)
+			    {
+			        printf("[!] Pesanan belum dikirim seller!\n");
+			    }
+			    else
+			    {
+			        strcpy(orders[i].status, "COMPLETED");
+			
+			        printf(
+			            "[OK] Pesanan #%d telah diselesaikan.\n",
+			            oid
+			        );
+			
+			        save_data();
+			    }
+			
+			    break;
+			}
         }
         if (!found) printf("%s[!] Order ID tidak ditemukan!\n%s", COLOR_RED, COLOR_RESET);
         save_data();
@@ -927,9 +1044,75 @@ void view_customer_orders() {
             return;
         }
         
-        printf("Masukkan ID Produk dari order ini yang ingin diulas: ");
-        int pid = read_int_safe();
-        printf("Masukkan Rating (1-5): ");
+        bool completed_order = false;
+
+		for(int i=0; i<order_count; i++)
+		{
+		    if(
+		        orders[i].order_id == oid &&
+		        orders[i].customer_id == uid &&
+		        strcmp(orders[i].status, "COMPLETED") == 0
+		    )
+		    {
+		        completed_order = true;
+		        break;
+		    }
+		}
+		
+		if(!completed_order)
+		{
+		    printf("[!] Pesanan harus COMPLETED sebelum memberi ulasan!\n");
+		    press_enter_to_continue();
+		    return;
+		}
+        
+       printf("Masukkan ID Produk dari order ini yang ingin diulas: ");
+		int pid = read_int_safe();
+		
+		bool product_in_order = false;
+		
+		for(int i=0; i<order_item_count; i++)
+		{
+		    if(
+		        order_items[i].order_id == oid &&
+		        order_items[i].product_id == pid
+		    )
+		    {
+		        product_in_order = true;
+		        break;
+		    }
+		}
+		
+		if(!product_in_order)
+		{
+		    printf("[!] Produk tersebut tidak ada pada order ini!\n");
+		    press_enter_to_continue();
+		    return;
+		}
+		
+		bool already_reviewed = false;
+		
+		for(int i=0; i<review_count; i++)
+		{
+		    if(
+		        reviews[i].order_id == oid &&
+		        reviews[i].product_id == pid &&
+		        reviews[i].customer_id == uid
+		    )
+		    {
+		        already_reviewed = true;
+		        break;
+		    }
+		}
+		
+		if(already_reviewed)
+		{
+		    printf("[!] Anda sudah memberi ulasan untuk produk ini!\n");
+		    press_enter_to_continue();
+		    return;
+		}
+		
+		printf("Masukkan Rating (1-5): ");
         int rate = read_int_safe();
         if (rate < 1 || rate > 5) {
             printf("%s[!] Rating tidak valid!\n%s", COLOR_RED, COLOR_RESET);
@@ -961,13 +1144,23 @@ void view_customer_orders() {
         int oid = read_int_safe();
         for (int i = 0; i < order_count; i++) {
             if (orders[i].order_id == oid && orders[i].customer_id == uid) {
-                if (strcmp(orders[i].status, "COMPLETED") == 0) {
-                    printf("%s[!] Gagal: Barang sudah berstatus Selesai, tidak bisa retur.\n%s", COLOR_RED, COLOR_RESET);
-                } else {
-                    strcpy(orders[i].status, "RETURNED");
-                    printf("%s[OK] Pengajuan retur untuk pesanan #%d berhasil diproses.\n%s", COLOR_PINE_GREEN, oid, COLOR_RESET);
-                    save_data();
-                }
+                if (strcmp(orders[i].status, "COMPLETED") != 0)
+				{
+				    printf("%s[!] Hanya pesanan COMPLETED yang dapat diretur.\n%s",
+				           COLOR_RED,
+				           COLOR_RESET);
+				}
+				else
+				{
+				    strcpy(orders[i].status, "RETURNED");
+				
+				    printf("%s[OK] Pengajuan retur untuk pesanan #%d berhasil diproses.\n%s",
+				           COLOR_PINE_GREEN,
+				           oid,
+				           COLOR_RESET);
+				
+				    save_data();
+				}
                 break;
             }
         }
@@ -1000,6 +1193,28 @@ void view_customer_orders() {
     else if (opt == 5) {
         printf("Masukkan ID Order: ");
         int oid = read_int_safe();
+        
+        bool found = false;
+
+		for(int i=0; i<order_count; i++)
+		{
+		    if(
+		        orders[i].order_id == oid &&
+		        orders[i].customer_id == uid
+		    )
+		    {
+		        found = true;
+		        break;
+		    }
+		}
+		
+		if(!found)
+		{
+		    printf("[!] Order tidak ditemukan!\n");
+		    press_enter_to_continue();
+		    return;
+		}
+
         printf("\n--- DETAIL PESANAN #%d ---\n", oid);
         printf("%s+------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
         printf("%s| Product ID | Kuantitas  | Harga Satuan     |\n%s", COLOR_SEA_GREEN, COLOR_RESET);
@@ -1015,10 +1230,19 @@ void view_customer_orders() {
 }
 
 void process_direct_order(int product_id, int quantity) {
-    int p_idx = product_id - 1; // Asumsi ID produk berurutan dengan indeks (ID 1 = indeks 0)
-    
+    int p_idx = -1;
+
+	for(int i=0; i<product_count; i++)
+	{
+	    if(products[i].id == product_id)
+	    {
+	        p_idx = i;
+	        break;
+	    }
+	}
+	    
     // Validasi dasar keamanan stok dan ID produk
-    if (p_idx < 0 || p_idx >= product_count || quantity <= 0) {
+    if (p_idx == -1 || quantity <= 0) {
         printf("%s[!] Gagal: Produk tidak valid.%s\n", COLOR_RED, COLOR_RESET);
         return;
     }
@@ -1155,14 +1379,34 @@ void execution_search_menu() {
     if (sort_opt == 1) {
         for(int i=0; i<total-1; i++) {
             for(int j=i+1; j<total; j++) {
-                int idx_a = matched_ids[i] - 1, idx_b = matched_ids[j] - 1;
+                int idx_a = -1;
+				int idx_b = -1;
+				
+				for(int k=0; k<product_count; k++)
+				{
+				    if(products[k].id == matched_ids[i])
+				        idx_a = k;
+				
+				    if(products[k].id == matched_ids[j])
+				        idx_b = k;
+				}
                 if(products[idx_a].price > products[idx_b].price) { int temp = matched_ids[i]; matched_ids[i] = matched_ids[j]; matched_ids[j] = temp; }
             }
         }
     } else if (sort_opt == 2) {
         for(int i=0; i<total-1; i++) {
             for(int j=i+1; j<total; j++) {
-                int idx_a = matched_ids[i] - 1, idx_b = matched_ids[j] - 1;
+                int idx_a = -1;
+				int idx_b = -1;
+				
+				for(int k=0; k<product_count; k++)
+				{
+				    if(products[k].id == matched_ids[i])
+				        idx_a = k;
+				
+				    if(products[k].id == matched_ids[j])
+				        idx_b = k;
+				}
                 if(products[idx_a].sales_count < products[idx_b].sales_count) { int temp = matched_ids[i]; matched_ids[i] = matched_ids[j]; matched_ids[j] = temp; }
             }
         }
@@ -1173,10 +1417,36 @@ void execution_search_menu() {
     printf("%s+-----+---------------------------+----------+----------------+------+%s\n", COLOR_SEA_GREEN, COLOR_RESET);
     printf("%s| %-3s | %-25s | %-8s | %-14s | %-4s |%s\n", COLOR_SEA_GREEN, "ID", "Nama Produk", "Brand", "Harga", "Stok", COLOR_RESET);
     printf("%s+-----+---------------------------+----------+----------------+------+%s\n", COLOR_SEA_GREEN, COLOR_RESET);
-    for (int i = 0; i < total; i++) {
-        int idx = matched_ids[i] - 1; products[idx].search_count++;
-        printf("%s| %-3d | %-25.25s | %-8.8s | Rp%-12.2f | %-4d |%s\n", COLOR_SEA_GREEN, products[idx].id, products[idx].name, products[idx].brand, products[idx].price, products[idx].stock, COLOR_RESET);
-    }
+    for (int i = 0; i < total; i++)
+	{
+	    int idx = -1;
+	
+	    for(int j=0; j<product_count; j++)
+	    {
+	        if(products[j].id == matched_ids[i])
+	        {
+	            idx = j;
+	            break;
+	        }
+	    }
+	
+	    if(idx == -1)
+	        continue;
+	
+	    products[idx].search_count++;
+	
+	    printf(
+	        "%s| %-3d | %-25.25s | %-8.8s | Rp%-12.2f | %-4d |%s\n",
+	        COLOR_SEA_GREEN,
+	        products[idx].id,
+	        products[idx].name,
+	        products[idx].brand,
+	        products[idx].price,
+	        products[idx].stock,
+	        COLOR_RESET
+	    );
+	}
+        
     printf("%s+-----+---------------------------+----------+----------------+------+%s\n", COLOR_SEA_GREEN, COLOR_RESET);
     
     if (total > 0) {
@@ -1224,7 +1494,14 @@ void execution_search_menu() {
                     for (int i = 0; i < total; i++) {
                         if (matched_ids[i] == target_id) {
                             valid_product = true;
-                            p_idx = target_id - 1;
+                            for(int j=0; j<product_count; j++)
+							{
+							    if(products[j].id == target_id)
+							    {
+							        p_idx = j;
+							        break;
+							    }
+							}
                             break;
                         }
                     }
@@ -1277,6 +1554,46 @@ void execution_search_menu() {
                     }
 
                     if (wishlist_count < MAX_DATA) {
+                    	
+                    	bool product_exists = false;
+						for(int i=0; i<product_count; i++)
+						{
+						    if(products[i].id == pid)
+						    {
+						        product_exists = true;
+						        break;
+						    }
+						}
+						
+						if(!product_exists)
+						{
+						    printf("[!] Produk tidak ditemukan!\n");
+						    press_enter_to_continue();
+						    break;
+						}
+						
+                    	bool already_exist = false;
+
+						for(int i=0; i<wishlist_count; i++)
+						{
+						    if(
+						        wishlists[i].user_id ==
+						        users[logged_in_user_idx].id &&
+						        wishlists[i].product_id == pid
+						    )
+						    {
+						        already_exist = true;
+						        break;
+						    }
+						}
+						
+						if(already_exist)
+						{
+						    printf("[!] Produk sudah ada di wishlist!\n");
+						    press_enter_to_continue();
+						    break;
+						}
+						
                         wishlists[wishlist_count].user_id = users[logged_in_user_idx].id; 
                         wishlists[wishlist_count].product_id = pid;
                         wishlist_count++; 
@@ -1298,7 +1615,26 @@ void execution_search_menu() {
 
                     add_to_recent_view(pid); 
                     clear_screen(); 
-                    display_product_details(pid - 1);
+                    int p_idx = -1;
+
+					for(int i=0; i<product_count; i++)
+					{
+					    if(products[i].id == pid)
+					    {
+					        p_idx = i;
+					        break;
+					    }
+					}
+					
+					if(p_idx == -1)
+					{
+					    printf("[!] Produk tidak ditemukan!\n");
+					    press_enter_to_continue();
+					}
+					else
+					{
+					    display_product_details(p_idx);
+					}
                     stay_in_search = false; // Keluar dari loop setelah melihat detail produk
                     break;
                 }
@@ -1431,6 +1767,87 @@ void edit_profile_menu() {
     }
 }
 
+bool validate_seller_registration(int idx)
+{
+    if(strlen(users[idx].full_name) < 3)
+    {
+        printf("[!] Nama lengkap belum valid!\n");
+        return false;
+    }
+
+    if(strlen(users[idx].address) < 5)
+    {
+        printf("[!] Alamat belum lengkap!\n");
+        return false;
+    }
+
+    if(strchr(users[idx].email, '@') == NULL)
+    {
+        printf("[!] Email tidak valid!\n");
+        return false;
+    }
+
+    if(strlen(users[idx].phone) < 10)
+    {
+        printf("[!] Nomor HP tidak valid!\n");
+        return false;
+    }
+
+    return true;
+}
+
+void upgrade_to_seller()
+{
+    int idx = logged_in_user_idx;
+    
+    if(strcmp(users[idx].role, "CUSTOMER") != 0)
+	{
+    printf("[!] Hanya customer yang dapat upgrade menjadi seller.\n");
+    press_enter_to_continue();
+    return;
+	}
+
+    if(strcmp(users[idx].role, "SELLER") == 0)
+    {
+        printf("[!] Anda sudah menjadi seller.\n");
+        press_enter_to_continue();
+        return;
+    }
+
+    printf("\n=== PENDAFTARAN SELLER ===\n");
+
+    if(!validate_seller_registration(idx))
+    {
+        printf("\nLengkapi profil terlebih dahulu.\n");
+        press_enter_to_continue();
+        return;
+    }
+
+    printf("\nData profil valid.\n");
+    printf("Yakin ingin upgrade menjadi seller? (Y/N): ");
+
+    char confirm[10];
+    read_string_safe(confirm, 10);
+
+    if(confirm[0] == 'Y' || confirm[0] == 'y')
+    {
+        strcpy(users[idx].role, "SELLER");
+
+        save_data();
+
+        printf("\n[OK] Selamat! Akun Anda sekarang menjadi SELLER.\n");
+        printf("Silakan login ulang untuk masuk ke dashboard seller.\n");
+
+        logged_in_user_idx = -1;
+    }
+    else
+    {
+        printf("\nUpgrade dibatalkan.\n");
+    }
+
+    press_enter_to_continue();
+}
+
 void customer_menu() {
     int choice;
     do {
@@ -1461,7 +1878,8 @@ void customer_menu() {
         
         printf("\n%s[MENU UTAMA]%s\n", COLOR_EMERALD, COLOR_RESET);
         printf("%s1.%s Cari Produk       %s2.%s Keranjang Belanja   %s3.%s Wishlist Favorit\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET);
-        printf("%s4.%s Riwayat Pesanan   %s5.%s Edit Profil         %s6.%s Keluar Sesi\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET, COLOR_RED, COLOR_RESET);
+        printf("%s4.%s Riwayat Pesanan   %s5.%s Edit Profil\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET);
+		printf("%s6.%s Upgrade Jadi Seller   %s7.%s Keluar Sesi\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_RED, COLOR_RESET);
         printf("\n%s=================================================================================%s\n", COLOR_PINE_GREEN, COLOR_RESET);
         printf("Masukkan pilihan Anda: ");
         choice = read_int_safe();
@@ -1471,8 +1889,13 @@ void customer_menu() {
             case 3: manage_wishlist_menu(); break;
             case 4: view_customer_orders(); break;
             case 5: edit_profile_menu(); break;
+            case 6: upgrade_to_seller(); 
+			if(logged_in_user_idx == -1)
+        	return;
+			break;
+            case 7: break;
         }
-    } while (choice != 6);
+    } while (choice != 7);
     logged_in_user_idx = -1;
 }
 
@@ -1483,7 +1906,128 @@ void seller_menu() {
     int choice; int sid = users[logged_in_user_idx].id;
     do {
         clear_screen(); print_warm_welcome_bar(users[logged_in_user_idx].username, "Menu Seller");
-        printf("\n1. Tambah Produk\n2. Update Stok\n3. Hapus Produk\n4. Kelola Pesanan\n5. Analitik Toko\n6. Ulasan Pembeli\n7. Edit Profil\n%s8. Keluar Sesi%s\nPilihan Anda: ", COLOR_RED, COLOR_RESET);
+        printf("\n%s[RINGKASAN TOKO]%s\n",
+			       COLOR_EMERALD,
+			       COLOR_RESET);
+			
+			printf("%s+----------------------------------------------------------+%s\n",
+			       COLOR_SEA_GREEN,
+			       COLOR_RESET);
+			
+			printf("%s| %-56s |%s\n",
+			       COLOR_SEA_GREEN,
+			       "Selamat datang di Dashboard Seller",
+			       COLOR_RESET);
+			
+			printf("%s+----------------------------------------------------------+%s\n",
+			       COLOR_SEA_GREEN,
+			       COLOR_RESET);
+       printf("\n%s[PRODUK TOKO SAYA]%s\n",
+			       COLOR_EMERALD,
+			       COLOR_RESET);
+			
+			printf("%s+----+----------------------+-------+---------------+%s\n",
+			       COLOR_SEA_GREEN,
+			       COLOR_RESET);
+			
+			printf("%s| %-2s | %-20s | %-5s | %-13s |%s\n",
+			       COLOR_SEA_GREEN,
+			       "ID",
+			       "Nama Produk",
+			       "Stok",
+			       "Harga",
+			       COLOR_RESET);
+			
+			printf("%s+----+----------------------+-------+---------------+%s\n",
+			       COLOR_SEA_GREEN,
+			       COLOR_RESET);
+
+		int my_product = 0;
+
+		for(int i=0;i<product_count;i++)
+	{
+    	if(products[i].seller_id == sid)
+    	{
+        	printf("%s| %-2d | %-20.20s | %-5d | Rp%-10.0f |%s\n",
+			    COLOR_SEA_GREEN,
+			    products[i].id,
+			    products[i].name,
+			    products[i].stock,
+			    products[i].price,
+			    COLOR_RESET);
+
+        	my_product++;
+    	}
+	}
+
+	printf("%s+----+----------------------+-------+---------------+%s\n",
+			       COLOR_SEA_GREEN,
+			       COLOR_RESET);
+	printf("Total Produk: %d\n", my_product);
+	
+	
+	int total_stock = 0;
+	int total_sales = 0;
+
+	for(int i=0;i<product_count;i++)
+	{
+    	if(products[i].seller_id == sid)
+    	{
+        	total_stock += products[i].stock;
+        	total_sales += products[i].sales_count;
+    	}
+	}
+
+	printf("\n%s[STATISTIK TOKO]%s\n",
+	       COLOR_EMERALD,
+	       COLOR_RESET);
+	
+	printf("%s+----------------------------------+%s\n",
+	       COLOR_SEA_GREEN,
+	       COLOR_RESET);
+	
+	printf("%s| Produk Aktif : %-15d |%s\n",
+	       COLOR_SEA_GREEN,
+	       my_product,
+	       COLOR_RESET);
+	
+	printf("%s| Total Stok   : %-15d |%s\n",
+	       COLOR_SEA_GREEN,
+	       total_stock,
+	       COLOR_RESET);
+	
+	printf("%s| Total Terjual: %-15d |%s\n",
+	       COLOR_SEA_GREEN,
+	       total_sales,
+	       COLOR_RESET);
+	
+	printf("%s+----------------------------------+%s\n",
+	       COLOR_SEA_GREEN,
+	       COLOR_RESET);
+	
+        printf("\n%s[MENU SELLER]%s\n",
+		       COLOR_EMERALD,
+		       COLOR_RESET);
+		
+		printf("%s1.%s Tambah Produk      %s2.%s Update Stok      %s3.%s Hapus Produk\n",
+		       COLOR_LIME_GREEN, COLOR_RESET,
+		       COLOR_LIME_GREEN, COLOR_RESET,
+		       COLOR_LIME_GREEN, COLOR_RESET);
+		
+		printf("%s4.%s Kelola Pesanan    %s5.%s Analitik Toko    %s6.%s Ulasan Pembeli\n",
+		       COLOR_LIME_GREEN, COLOR_RESET,
+		       COLOR_LIME_GREEN, COLOR_RESET,
+		       COLOR_LIME_GREEN, COLOR_RESET);
+		
+		printf("%s7.%s Edit Profil       %s8.%s Keluar Sesi\n",
+		       COLOR_LIME_GREEN, COLOR_RESET,
+		       COLOR_RED, COLOR_RESET);
+		
+		printf("\n%s=======================================================================%s\n",
+		       COLOR_PINE_GREEN,
+		       COLOR_RESET);
+		
+		printf("Masukkan pilihan Anda: ");
         choice = read_int_safe();
         if (choice == 1) {
             printf("\n[INFO] Menambahkan barang baru ke etalase Anda.\n");
@@ -1491,19 +2035,173 @@ void seller_menu() {
             printf("Nama Barang: "); read_string_safe(p.name, MAX_STR);
             printf("Merek Brand: "); read_string_safe(p.brand, MAX_STR);
             printf("Kategori   : "); read_string_safe(p.category, MAX_STR);
-            printf("Harga Jual : "); p.price = read_double_safe();
-            printf("Jumlah Stok: "); p.stock = read_int_safe();
+            printf("Harga Jual : ");
+			p.price = read_double_safe();
+			
+			if(p.price <= 0)
+			{
+			    printf("[!] Harga harus lebih dari 0!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			printf("Jumlah Stok: ");
+			p.stock = read_int_safe();
+			
+			if(p.stock < 0)
+			{
+			    printf("[!] Stok tidak boleh negatif!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
             printf("Deskripsi  : "); read_string_safe(p.description, MAX_STR);
             p.seller_id = sid; p.search_count = 0; p.sales_count = 0;
+            if(strlen(p.name) < 3)
+			{
+			    printf("[!] Nama produk minimal 3 karakter!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			if(strlen(p.brand) < 2)
+			{
+			    printf("[!] Brand tidak valid!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			if(strlen(p.category) < 2)
+			{
+			    printf("[!] Kategori tidak valid!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			if(p.price <= 0)
+			{
+			    printf("[!] Harga harus lebih dari 0!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			if(p.stock < 0)
+			{
+			    printf("[!] Stok tidak boleh negatif!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
             if (product_count < MAX_DATA) { products[product_count++] = p; save_data(); rebuild_tries(); }
-        } else if (choice == 2) {
-            printf("\n[INFO] Mengubah jumlah barang yang tersedia.\n");
-            printf("ID Produk: "); int pid = read_int_safe();
+        } 
+		
+		else if (choice == 2) {
+		    printf("\n[INFO] Mengubah jumlah barang yang tersedia.\n");
+		
+		    printf("\n=== PRODUK ANDA ===\n");
+		
+		    for(int i=0; i<product_count; i++)
+		    {
+		        if(products[i].seller_id == sid)
+		        {
+		            printf(
+		                "ID:%d | %s | Stok:%d\n",
+		                products[i].id,
+		                products[i].name,
+		                products[i].stock
+		            );
+		        }
+		    }
+		
+		    printf("\nID Produk: ");
+		    int pid = read_int_safe();
+            bool product_exists = false;
+
+			for(int i=0; i<product_count; i++)
+			{
+			    if(
+			        products[i].id == pid &&
+			        products[i].seller_id == sid
+			    )
+			    {
+			        product_exists = true;
+			        break;
+			    }
+			}
+			
+			if(!product_exists)
+			{
+			    printf("[!] Produk tidak ditemukan atau bukan milik Anda!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
             printf("Stok Baru: "); int nstk = read_int_safe();
-            for(int i=0; i<product_count; i++) { if(products[i].id == pid && products[i].seller_id == sid) products[i].stock = nstk; }
-            save_data();
-        } else if (choice == 3) {
-            printf("ID Produk yang dihapus: "); int pid = read_int_safe();
+            if(nstk < 0)
+			{
+			    printf("[!] Stok tidak boleh negatif!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+            bool found = false;
+
+			for(int i=0; i<product_count; i++)
+			{
+			    if(
+			        products[i].id == pid &&
+			        products[i].seller_id == sid
+			    )
+			    {
+			        products[i].stock = nstk;
+			        found = true;
+			        break;
+			    }
+			}
+			
+			if(found)
+			{
+			    save_data();
+			    printf("[OK] Stok berhasil diperbarui!\n");
+			}
+			else
+			{
+			    printf("[!] Produk tidak ditemukan atau bukan milik Anda!\n");
+			}
+			
+			press_enter_to_continue(); }
+		
+		else if (choice == 3) {
+            printf("ID Produk yang dihapus: ");
+			int pid = read_int_safe();
+			
+			bool product_exists = false;
+			
+			for(int i = 0; i < product_count; i++)
+			{
+			    if(
+			        products[i].id == pid &&
+			        products[i].seller_id == sid
+			    )
+			    {
+			        product_exists = true;
+			        break;
+			    }
+			}
+			
+			if(!product_exists)
+			{
+			    printf("[!] Produk tidak ditemukan atau bukan milik Anda!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			printf("Yakin ingin menghapus produk ini? (Y/N): ");
+			char confirm[10];
+			read_string_safe(confirm, 10);
+			
+			if(confirm[0] != 'Y' && confirm[0] != 'y')
+			{
+			    printf("Penghapusan dibatalkan.\n");
+			    press_enter_to_continue();
+			    continue;
+			}
             for (int i = 0; i < product_count; i++) {
                 if (products[i].id == pid && products[i].seller_id == sid) {
                     for (int j = i; j < product_count - 1; j++) products[j] = products[j + 1];
@@ -1511,7 +2209,9 @@ void seller_menu() {
                 }
             }
             save_data(); rebuild_tries();
-        } else if (choice == 4) {
+        } 
+		
+		else if (choice == 4) {
             clear_screen(); printf("--- PESANAN MASUK ---\n");
             printf("%s+----------+-----------------+-------------+%s\n", COLOR_SEA_GREEN, COLOR_RESET);
             printf("%s| %-8s | %-15s | %-11s |%s\n", COLOR_SEA_GREEN, "Order ID", "Total Harga", "Status", COLOR_RESET);
@@ -1524,35 +2224,219 @@ void seller_menu() {
             printf("%s+----------+-----------------+-------------+%s\n", COLOR_SEA_GREEN, COLOR_RESET);
             printf("\n1. Kirim Barang\n2. Tolak Pesanan\n3. Kembali\nPilihan: ");
             int oopt = read_int_safe();
-            if(oopt == 1) {
-                printf("ID Order: "); int oid = read_int_safe();
-                for(int i=0; i<order_count; i++) { if(orders[i].order_id == oid) strcpy(orders[i].status, "SHIPPED"); } save_data();
-            } else if (oopt == 2) {
-                printf("ID Order: "); int oid = read_int_safe();
-                for(int i=0; i<order_count; i++) { if(orders[i].order_id == oid) strcpy(orders[i].status, "REJECTED"); } save_data();
-            }
-        } else if (choice == 5) {
+            if(oopt == 1)
+			{
+			    printf("ID Order: ");
+			    int oid = read_int_safe();
+			
+			    bool found = false;
+			
+			    for(int i=0; i<order_count; i++)
+			    {
+			        if(
+			            orders[i].order_id == oid &&
+			            orders[i].seller_id == sid
+			        )
+			        {
+			            found = true;
+			
+			            if(strcmp(orders[i].status, "PENDING") != 0)
+			            {
+			                printf("[!] Hanya pesanan PENDING yang bisa dikirim!\n");
+			            }
+			            else
+			            {
+			                strcpy(orders[i].status, "SHIPPED");
+			                save_data();
+			                printf("[OK] Pesanan berhasil dikirim.\n");
+			            }
+			
+			            break;
+			        }
+			    }
+			
+			    if(!found)
+			    {
+			        printf("[!] Order tidak ditemukan atau bukan milik Anda.\n");
+			    }
+			
+			    press_enter_to_continue();
+			}
+            else if (oopt == 2)
+			{
+			    printf("ID Order: ");
+			    int oid = read_int_safe();
+			
+			    bool found = false;
+			
+			    for(int i=0; i<order_count; i++)
+			    {
+			        if(
+			            orders[i].order_id == oid &&
+			            orders[i].seller_id == sid
+			        )
+			        {
+			            found = true;
+			
+			            if(strcmp(orders[i].status, "PENDING") != 0)
+			            {
+			                printf("[!] Hanya pesanan PENDING yang bisa ditolak!\n");
+			            }
+			            else
+			            {
+			                strcpy(orders[i].status, "REJECTED");
+			                save_data();
+			                printf("[OK] Pesanan berhasil ditolak.\n");
+			            }
+			
+			            break;
+			        }
+			    }
+			
+			    if(!found)
+			    {
+			        printf("[!] Order tidak ditemukan atau bukan milik Anda.\n");
+			    }
+			
+			    press_enter_to_continue();
+			}
+        } 
+		
+		else if (choice == 5) {
             clear_screen(); printf("--- ANALITIK TOKO ---\n");
             double revenue = 0;
             for(int i=0; i<order_count; i++) { if(orders[i].seller_id == sid && strcmp(orders[i].status, "COMPLETED") == 0) revenue += orders[i].total_amount; }
             printf("Total Pendapatan (Selesai): Rp%.2f\n", revenue);
             int top_p = -1; int max_s = -1;
             for(int i=0; i<product_count; i++) { if(products[i].seller_id == sid && products[i].sales_count > max_s) { max_s = products[i].sales_count; top_p = i; } }
-            if(top_p != -1) printf("Produk Terlaris: %s [%d Terjual]\n", products[top_p].name, products[top_p].sales_count);
-            press_enter_to_continue();
-        } else if (choice == 6) {
+            if(top_p != -1 && max_s > 0)
+			{
+			    printf("Produk Terlaris: %s [%d Terjual]\n",
+			           products[top_p].name,
+			           products[top_p].sales_count);
+			}
+			else
+			{
+			    printf("Belum ada produk yang terjual.\n");
+			}
+			
+			int total_products = 0;
+			int total_stock = 0;
+			
+			for(int i=0; i<product_count; i++)
+			{
+			    if(products[i].seller_id == sid)
+			    {
+			        total_products++;
+			        total_stock += products[i].stock;
+			    }
+			}
+			
+			printf("\nProduk Aktif : %d\n", total_products);
+			printf("Total Stok   : %d\n", total_stock);
+			
+			press_enter_to_continue();
+        } 
+		
+		else if (choice == 6) {
             clear_screen(); printf("--- ULASAN PRODUK ---\n");
-            for(int i=0; i<review_count; i++) {
-                printf("Produk ID: %d | User: %s | Rating: ", reviews[i].product_id, get_username_by_id(reviews[i].customer_id));
-                print_stars(reviews[i].rating); printf(" | Ulasan: %s\n", reviews[i].comment);
-            }
-            press_enter_to_continue();
-        } else if (choice == 7) {
-            printf("Nama Baru: "); read_string_safe(users[logged_in_user_idx].username, MAX_STR); save_data();
-        }
-    } while (choice != 8);
-    logged_in_user_idx = -1;
-}
+            bool has_review = false;
+            for(int i=0; i<review_count; i++)
+			{
+			    bool is_my_product = false;
+			
+			    for(int j=0; j<product_count; j++)
+			    {
+			        if(
+			            products[j].id == reviews[i].product_id &&
+			            products[j].seller_id == sid
+			        )
+			        {
+			            is_my_product = true;
+			            break;
+			        }
+			    }
+			
+			    if(is_my_product)
+				{
+				    has_review = true;
+			        printf(
+			            "Produk ID: %d | User: %s | Rating: ",
+			            reviews[i].product_id,
+			            get_username_by_id(reviews[i].customer_id)
+			        );
+			
+			        print_stars(reviews[i].rating);
+			
+			        printf(
+			            " | Ulasan: %s\n",
+			            reviews[i].comment
+			        );
+			    }
+			}
+			if(!has_review)
+			{
+			    printf("Belum ada ulasan untuk produk Anda.\n");
+			}
+			press_enter_to_continue();
+        } 
+		
+		else if (choice == 7) {
+            char new_username[MAX_STR];
+
+			printf("Username Baru (ENTER untuk batal): ");
+			read_string_safe(new_username, MAX_STR);
+			
+			if(strlen(new_username) == 0)
+			{
+			    printf("Perubahan dibatalkan.\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			if(strlen(new_username) < 3)
+			{
+			    printf("[!] Username minimal 3 karakter!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			bool duplicate = false;
+			
+			for(int i=0;i<user_count;i++)
+			{
+			    if(
+			        i != logged_in_user_idx &&
+			        strcmp(users[i].username,new_username)==0
+			    )
+			    {
+			        duplicate = true;
+			        break;
+			    }
+			}
+			
+			if(duplicate)
+			{
+			    printf("[!] Username sudah digunakan!\n");
+			    press_enter_to_continue();
+			    continue;
+			}
+			
+			strcpy(
+			    users[logged_in_user_idx].username,
+			    new_username
+			);
+			
+			save_data();
+			
+			printf("[OK] Username berhasil diperbarui!\n");
+			press_enter_to_continue();
+			        }
+
+			    } while (choice != 8);
+			
+			    logged_in_user_idx = -1;
+			}
 
 /* ============================================================================
    ADMINISTRATOR DASHBOARD CONTROL (FULL ASCII MURNI & BERWARNA)
@@ -2042,7 +2926,7 @@ int main() {
     
     if (root_product_name != NULL) free_trie(root_product_name);
     if (root_brand != NULL) free_trie(root_brand);
-    if (root_category != NULL) free_trie(root_category);
+    if (root_category != NULL) free_trie(root_category);	
     printf("\nTerima kasih telah menggunakan layanan kami. Sampai jumpa!\n");
     return 0;
 }
