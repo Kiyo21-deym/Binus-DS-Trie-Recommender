@@ -637,7 +637,7 @@ void manage_cart_menu() {
     }
 
     if (items_found == 0) {
-        printf("%s| %-62s |%s\n", COLOR_SEA_GREEN, "Keranjang Anda masih kosong", COLOR_RESET);
+        printf("%s| %-65s |%s\n", COLOR_SEA_GREEN, "Keranjang Anda masih kosong", COLOR_RESET);
     }
     printf("%s+--------+-----------------------------+----------+------------------+%s\n", COLOR_SEA_GREEN, COLOR_RESET);
     printf("%s[TOTAL TAGIHAN]%s Rp%.2f\n", COLOR_LIME_GREEN, COLOR_RESET, total);
@@ -929,7 +929,7 @@ void manage_wishlist_menu() {
     }
 
     if (items_found == 0) {
-        printf("%s| %-60s |\n%s", COLOR_SEA_GREEN, "Wishlist Anda masih kosong", COLOR_RESET);
+        printf("%s| %-55s |\n%s", COLOR_SEA_GREEN, "Wishlist Anda masih kosong", COLOR_RESET);
     }
     printf("%s+--------+-----------------------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
 
@@ -989,12 +989,12 @@ void view_customer_orders() {
     }
 
     if (items_found == 0) {
-        printf("%s| %-46s |\n%s", COLOR_SEA_GREEN, "Belum ada riwayat pesanan", COLOR_RESET);
+        printf("%s| %-50s |\n%s", COLOR_SEA_GREEN, "Belum ada riwayat pesanan", COLOR_RESET);
     }
     printf("%s+--------+-----------------+------------+------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
 
     printf("\n%s[PILIHAN AKSI]%s\n", COLOR_EMERALD, COLOR_RESET);
-    printf("%s1.%s Konfirmasi Penyelesaian   %s2.%s Beri Ulasan   %s3.%s Ajukan Retur\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET);
+    printf("%s1.%s Konfirmasi Penyelesaian   %s2.%s Beri Ulasan     %s3.%s Ajukan Retur\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET);
     printf("%s4.%s Batalkan Pembelian        %s5.%s Detail Pesanan  %s6.%s Kembali\n", COLOR_RED, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET, COLOR_RED, COLOR_RESET);
     printf("Masukkan pilihan: ");
     int opt = read_int_safe();
@@ -1046,73 +1046,100 @@ void view_customer_orders() {
         
         bool completed_order = false;
 
-		for(int i=0; i<order_count; i++)
-		{
-		    if(
-		        orders[i].order_id == oid &&
-		        orders[i].customer_id == uid &&
-		        strcmp(orders[i].status, "COMPLETED") == 0
-		    )
-		    {
-		        completed_order = true;
-		        break;
-		    }
-		}
-		
-		if(!completed_order)
-		{
-		    printf("[!] Pesanan harus COMPLETED sebelum memberi ulasan!\n");
-		    press_enter_to_continue();
-		    return;
-		}
+        for(int i=0; i<order_count; i++)
+        {
+            if(
+                orders[i].order_id == oid &&
+                orders[i].customer_id == uid &&
+                strcmp(orders[i].status, "COMPLETED") == 0
+            )
+            {
+                completed_order = true;
+                break;
+            }
+        }
         
-       printf("Masukkan ID Produk dari order ini yang ingin diulas: ");
-		int pid = read_int_safe();
-		
-		bool product_in_order = false;
-		
-		for(int i=0; i<order_item_count; i++)
-		{
-		    if(
-		        order_items[i].order_id == oid &&
-		        order_items[i].product_id == pid
-		    )
-		    {
-		        product_in_order = true;
-		        break;
-		    }
-		}
-		
-		if(!product_in_order)
-		{
-		    printf("[!] Produk tersebut tidak ada pada order ini!\n");
-		    press_enter_to_continue();
-		    return;
-		}
-		
-		bool already_reviewed = false;
-		
-		for(int i=0; i<review_count; i++)
-		{
-		    if(
-		        reviews[i].order_id == oid &&
-		        reviews[i].product_id == pid &&
-		        reviews[i].customer_id == uid
-		    )
-		    {
-		        already_reviewed = true;
-		        break;
-		    }
-		}
-		
-		if(already_reviewed)
-		{
-		    printf("[!] Anda sudah memberi ulasan untuk produk ini!\n");
-		    press_enter_to_continue();
-		    return;
-		}
-		
-		printf("Masukkan Rating (1-5): ");
+        if(!completed_order)
+        {
+            printf("[!] Pesanan harus COMPLETED sebelum memberi ulasan!\n");
+            press_enter_to_continue();
+            return;
+        }
+
+        printf("\n%s--- Daftar Produk yang Bisa Diulas pada Order #%d ---%s\n", COLOR_PINE_GREEN, oid, COLOR_RESET);
+        printf("%s+------------+---------------------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        printf("%s| Product ID | Nama Produk               | Kuantitas  | Harga Satuan     |\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        printf("%s+------------+---------------------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        
+        for (int i = 0; i < order_item_count; i++) {
+            if (order_items[i].order_id == oid) {
+                char prod_name[MAX_STR] = "Tidak diketahui";
+                for (int k = 0; k < product_count; k++) {
+                    if (products[k].id == order_items[i].product_id) {
+                        strcpy(prod_name, products[k].name);
+                        break;
+                    }
+                }
+
+                printf("%s| %-10d | %-25.25s | %-10d | Rp%-14.2f |\n%s", 
+                       COLOR_SEA_GREEN, 
+                       order_items[i].product_id, 
+                       prod_name, 
+                       order_items[i].quantity, 
+                       order_items[i].price_at_purchase, 
+                       COLOR_RESET);
+            }
+        }
+        printf("%s+------------+---------------------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        printf("\n");
+        
+        printf("Masukkan ID Produk dari order ini yang ingin diulas: ");
+        int pid = read_int_safe();
+        
+        bool product_in_order = false;
+        
+        for(int i=0; i<order_item_count; i++)
+        {
+            if(
+                order_items[i].order_id == oid &&
+                order_items[i].product_id == pid
+            )
+            {
+                product_in_order = true;
+                break;
+            }
+        }
+        
+        if(!product_in_order)
+        {
+            printf("[!] Produk tersebut tidak ada pada order ini!\n");
+            press_enter_to_continue();
+            return;
+        }
+        
+        bool already_reviewed = false;
+        
+        for(int i=0; i<review_count; i++)
+        {
+            if(
+                reviews[i].order_id == oid &&
+                reviews[i].product_id == pid &&
+                reviews[i].customer_id == uid
+            )
+            {
+                already_reviewed = true;
+                break;
+            }
+        }
+        
+        if(already_reviewed)
+        {
+            printf("[!] Anda sudah memberi ulasan untuk produk ini!\n");
+            press_enter_to_continue();
+            return;
+        }
+        
+        printf("Masukkan Rating (1-5): ");
         int rate = read_int_safe();
         if (rate < 1 || rate > 5) {
             printf("%s[!] Rating tidak valid!\n%s", COLOR_RED, COLOR_RESET);
@@ -1138,15 +1165,15 @@ void view_customer_orders() {
             printf("%s[OK] Ulasan Anda berhasil disimpan!\n%s", COLOR_PINE_GREEN, COLOR_RESET);
         }
         press_enter_to_continue();
-    } 
+    }
     else if (opt == 3) {
         printf("Masukkan ID Order: ");
         int oid = read_int_safe();
         for (int i = 0; i < order_count; i++) {
             if (orders[i].order_id == oid && orders[i].customer_id == uid) {
-                if (strcmp(orders[i].status, "COMPLETED") != 0)
+                if (strcmp(orders[i].status, "COMPLETED") == 0 || strcmp(orders[i].status, "RETURNED") == 0 || strcmp(orders[i].status, "CANCELLED") == 0)
 				{
-				    printf("%s[!] Hanya pesanan COMPLETED yang dapat diretur.\n%s",
+				    printf("%s[!] Hanya pesanan SHIPPED atau PENDING yang dapat diretur.\n%s",
 				           COLOR_RED,
 				           COLOR_RESET);
 				}
@@ -1171,7 +1198,7 @@ void view_customer_orders() {
         int oid = read_int_safe();
         for (int i = 0; i < order_count; i++) {
             if (orders[i].order_id == oid && orders[i].customer_id == uid) {
-                if (strcmp(orders[i].status, "SHIPPED") == 0 || strcmp(orders[i].status, "COMPLETED") == 0) {
+                if (strcmp(orders[i].status, "SHIPPED") == 0 || strcmp(orders[i].status, "COMPLETED") == 0 || strcmp(orders[i].status, "RETURNED") == 0 || strcmp(orders[i].status, "CANCELLED") == 0) {
                     printf("%s[!] Gagal: Pesanan sudah dalam pengiriman atau sudah selesai.\n%s", COLOR_RED, COLOR_RESET);
                 } else {
                     printf("%sApakah Anda yakin ingin membatalkan pesanan #%d? (Y/N): %s", COLOR_RED, oid, COLOR_RESET);
@@ -1195,36 +1222,57 @@ void view_customer_orders() {
         int oid = read_int_safe();
         
         bool found = false;
+        int order_idx = -1;
 
-		for(int i=0; i<order_count; i++)
-		{
-		    if(
-		        orders[i].order_id == oid &&
-		        orders[i].customer_id == uid
-		    )
-		    {
-		        found = true;
-		        break;
-		    }
-		}
-		
-		if(!found)
-		{
-		    printf("[!] Order tidak ditemukan!\n");
-		    press_enter_to_continue();
-		    return;
-		}
-
-        printf("\n--- DETAIL PESANAN #%d ---\n", oid);
-        printf("%s+------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
-        printf("%s| Product ID | Kuantitas  | Harga Satuan     |\n%s", COLOR_SEA_GREEN, COLOR_RESET);
-        printf("%s+------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
-        for (int i = 0; i < order_item_count; i++) {
-            if (order_items[i].order_id == oid) {
-                printf("%s| %-10d | %-10d | Rp%-14.2f |\n%s", COLOR_SEA_GREEN, order_items[i].product_id, order_items[i].quantity, order_items[i].price_at_purchase, COLOR_RESET);
+        for(int i=0; i<order_count; i++)
+        {
+            if(
+                orders[i].order_id == oid &&
+                orders[i].customer_id == uid
+            )
+            {
+                found = true;
+                order_idx = i;
+                break;
             }
         }
-        printf("%s+------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        
+        if(!found)
+        {
+            printf("[!] Order tidak ditemukan!\n");
+            press_enter_to_continue();
+            return;
+        }
+
+        printf("\n--- DETAIL PESANAN #%d ---\n", oid);
+        printf("%s+------------+---------------------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        printf("%s| Product ID | Nama Produk               | Kuantitas  | Harga Satuan     |\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        printf("%s+------------+---------------------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        
+        for (int i = 0; i < order_item_count; i++) {
+            if (order_items[i].order_id == oid) {
+                
+                // Logika mencari nama produk berdasarkan product_id
+                char prod_name[MAX_STR] = "Tidak diketahui";
+                for (int k = 0; k < product_count; k++) {
+                    if (products[k].id == order_items[i].product_id) {
+                        strcpy(prod_name, products[k].name);
+                        break;
+                    }
+                }
+
+                printf("%s| %-10d | %-25.25s | %-10d | Rp%-14.2f |\n%s", 
+                       COLOR_SEA_GREEN, 
+                       order_items[i].product_id, 
+                       prod_name, 
+                       order_items[i].quantity, 
+                       order_items[i].price_at_purchase, 
+                       COLOR_RESET);
+            }
+        }
+        printf("%s+------------+---------------------------+------------+------------------+\n%s", COLOR_SEA_GREEN, COLOR_RESET);
+        printf("%s[TOTAL PEMBAYARAN]%s Rp%-14.2f\n", COLOR_EMERALD, COLOR_RESET, orders[order_idx].total_amount);
+        
         press_enter_to_continue();
     }
 }
@@ -1878,8 +1926,8 @@ void customer_menu() {
         
         printf("\n%s[MENU UTAMA]%s\n", COLOR_EMERALD, COLOR_RESET);
         printf("%s1.%s Cari Produk       %s2.%s Keranjang Belanja   %s3.%s Wishlist Favorit\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET);
-        printf("%s4.%s Riwayat Pesanan   %s5.%s Edit Profil\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET);
-		printf("%s6.%s Upgrade Jadi Seller   %s7.%s Keluar Sesi\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_RED, COLOR_RESET);
+        printf("%s4.%s Riwayat Pesanan   %s5.%s Edit Profil         %s6.%s Upgrade Jadi Seller\n", COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET, COLOR_LIME_GREEN, COLOR_RESET);
+		printf("%s7.%s Keluar Sesi\n", COLOR_RED, COLOR_RESET);
         printf("\n%s=================================================================================%s\n", COLOR_PINE_GREEN, COLOR_RESET);
         printf("Masukkan pilihan Anda: ");
         choice = read_int_safe();
@@ -2828,7 +2876,7 @@ int main() {
 
             // 3. INPUT NAMA LENGKAP
             while (true) {
-                printf("Nama Lengkap                 : ");
+                printf("Nama Lengkap                  : ");
                 read_string_safe(u.full_name, MAX_STR);
                 if (strlen(u.full_name) > 0) break;
                 printf("%s[!] Gagal: Nama lengkap tidak boleh kosong!%s\n\n", COLOR_RED, COLOR_RESET);
@@ -2837,14 +2885,14 @@ int main() {
             // 4. VALIDASI TEMPAT & TANGGAL LAHIR (Format DD-MM-YYYY)
             char tempat[MAX_STR], tgl[MAX_STR];
             while (true) {
-                printf("Tempat Lahir                 : ");
+                printf("Tempat Lahir                  : ");
                 read_string_safe(tempat, MAX_STR);
                 if (strlen(tempat) > 0) break;
                 printf("%s[!] Gagal: Tempat lahir tidak boleh kosong!%s\n\n", COLOR_RED, COLOR_RESET);
             }
             
             while (true) {
-                printf("Tanggal Lahir (DD-MM-YYYY)   : ");
+                printf("Tanggal Lahir (DD-MM-YYYY)    : ");
                 read_string_safe(tgl, MAX_STR);
                 
                 // Cek panjang karakter standar format DD-MM-YYYY harus 10 karakter
@@ -2864,11 +2912,11 @@ int main() {
                 }
                 printf("%s[!] Gagal: Gunakan format tanggal DD-MM-YYYY yang valid! (Contoh: 17-08-1945)%s\n\n", COLOR_RED, COLOR_RESET);
             }
-            snprintf(u.birth_info, MAX_STR, "%s, %s", tempat, tgl); // Disatukan menjadi "Kota, DD-MM-YYYY"
+            snprintf(u.birth_info, MAX_STR, "%s %s", tempat, tgl); // Disatukan menjadi "Kota, DD-MM-YYYY"
 
             // 5. INPUT ALAMAT PENGIRIMAN
             while (true) {
-                printf("Alamat Rumah                 : ");
+                printf("Alamat Rumah                  : ");
                 read_string_safe(u.address, MAX_STR);
                 if (strlen(u.address) > 0) break;
                 printf("%s[!] Gagal: Alamat tidak boleh kosong!%s\n\n", COLOR_RED, COLOR_RESET);
@@ -2876,7 +2924,7 @@ int main() {
 
             // 6. VALIDASI ALAMAT EMAIL (Harus mengandung '@' dan '.com')
             while (true) {
-                printf("Alamat Email                 : ");
+                printf("Alamat Email                  : ");
                 read_string_safe(u.email, MAX_STR);
                 char *at = strchr(u.email, '@');
                 char *dotcom = strstr(u.email, ".com");
