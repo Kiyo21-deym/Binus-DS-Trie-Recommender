@@ -16,3 +16,5 @@ order_id,customer_id,seller_id,total_amount,voucher_code,payment_method,shipping
 115,12,3,90000000.00,-,Transfer Instan,Reguler,PENDING,15-06-2026
 116,13,2,25000000.00,-,Transfer Instan,Reguler,SHIPPED,15-06-2026
 117,13,4,200.00,NONE,COD,REGULER,PENDING,15-06-2026
+118,15,2,14000000.00,-,Transfer Instan,Reguler,SHIPPED,22-06-2026
+119,15,3,42000000.00,-,Transfer Instan,Reguler,PENDING,22-06-2026
